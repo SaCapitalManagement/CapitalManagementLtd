@@ -1,8 +1,5 @@
-[
-  {
-    "strategy": "ETF_Monthly_Rotation_Rebelance",
-    "sum_commission": 0.0,
-    "avg_bars": 115.86,
-    "sum_dividends": 0.0
-  }
-]
+{
+  "sum_commission": 14800.0,
+  "sum_dividends": 175571.78,
+  "avg_bars": 115.86
+}

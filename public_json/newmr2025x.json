@@ -1,8 +1,5 @@
-[
-  {
-    "strategy": "Price_Action_Mean_Reversion",
-    "sum_commission": 0.0,
-    "avg_bars": 6.52,
-    "sum_dividends": 0.0
-  }
-]
+{
+  "sum_commission": 115101.45,
+  "sum_dividends": 203995.37,
+  "avg_bars": 6.52
+}

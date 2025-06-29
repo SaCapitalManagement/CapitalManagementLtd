@@ -1,8 +1,5 @@
-[
-  {
-    "strategy": "Nasdaq_Mean_Reversion",
-    "sum_commission": 0.0,
-    "avg_bars": 3.64,
-    "sum_dividends": 0.0
-  }
-]
+{
+  "sum_commission": 29331.23,
+  "sum_dividends": 21828.76,
+  "avg_bars": 3.64
+}

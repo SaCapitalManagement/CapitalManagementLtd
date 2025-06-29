@@ -1,8 +1,5 @@
-[
-  {
-    "strategy": "WeeklyBuyTheDip",
-    "sum_commission": 0.0,
-    "avg_bars": 2.92,
-    "sum_dividends": 0.0
-  }
-]
+{
+  "sum_commission": 129801.18,
+  "sum_dividends": 157341.32,
+  "avg_bars": 2.92
+}

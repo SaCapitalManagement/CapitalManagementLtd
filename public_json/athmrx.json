@@ -1,8 +1,5 @@
-[
-  {
-    "strategy": "AllTimeHigh_MeanReversion",
-    "sum_commission": 0.0,
-    "avg_bars": 9.22,
-    "sum_dividends": 0.0
-  }
-]
+{
+  "sum_commission": 19019.58,
+  "sum_dividends": 29756.97,
+  "avg_bars": 9.22
+}

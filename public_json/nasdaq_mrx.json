@@ -1,8 +1,5 @@
-[
-  {
-    "strategy": "NASDAQ_MR",
-    "sum_commission": 0.0,
-    "avg_bars": 5.01,
-    "sum_dividends": 0.0
-  }
-]
+{
+  "sum_commission": 94043.01,
+  "sum_dividends": 80417.25,
+  "avg_bars": 5.01
+}

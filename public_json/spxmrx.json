@@ -1,8 +1,5 @@
-[
-  {
-    "strategy": "SPY_MR",
-    "sum_commission": 0.0,
-    "avg_bars": 5.93,
-    "sum_dividends": 0.0
-  }
-]
+{
+  "sum_commission": 84354.51,
+  "sum_dividends": 112070.58,
+  "avg_bars": 5.93
+}
