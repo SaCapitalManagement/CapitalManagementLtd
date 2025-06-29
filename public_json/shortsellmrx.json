@@ -1,0 +1,8 @@
+[
+  {
+    "strategy": "ShortSideStrategy",
+    "sum_commission": 0.0,
+    "avg_bars": 2.01,
+    "sum_dividends": 0.0
+  }
+]
