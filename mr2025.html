@@ -325,5 +325,17 @@
 
     drawChartAndStats();
   </script>
+  <script>
+  function sendIframeHeight() {
+    const height = document.documentElement.scrollHeight;
+    window.parent.postMessage({ iframeHeight: height }, "*");
+  }
+
+  // Send on load, resize, and after slight delay for async content
+  window.addEventListener("load", sendIframeHeight);
+  window.addEventListener("resize", sendIframeHeight);
+  setTimeout(sendIframeHeight, 1000); // give time for echarts + JSON to render
+</script>
+
 </body>
 </html>
