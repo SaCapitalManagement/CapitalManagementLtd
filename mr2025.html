@@ -40,6 +40,39 @@
       padding: 24px;
     }
 
+    .extended-section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      margin-top: 24px;
+      border-top: 3px solid #e2e8f0;
+      position: relative;
+    }
+
+    .extended-section::before {
+      content: '';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      border-radius: 2px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 16px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 14px;
+    }
+
     .chart-container {
       width: 100%;
       aspect-ratio: 1/1;
@@ -87,7 +120,8 @@
       }
       
       .chart-section,
-      .stats-section {
+      .stats-section,
+      .extended-section {
         padding: 12px;
       }
       
@@ -127,6 +161,13 @@
         <div class="loading">Loading statistics...</div>
       </div>
     </div>
+
+    <div class="extended-section">
+      <div class="section-title">Trading Details</div>
+      <div id="extendedPanel">
+        <div class="loading">Loading extended data...</div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
@@ -135,12 +176,14 @@
       const newmrUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/newmr2025.json";
       const spyUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json";
       const statsUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json";
+      const extendedUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json";
 
       try {
-        const [newmrData, spyData, stats] = await Promise.all([
+        const [newmrData, spyData, stats, extended] = await Promise.all([
           fetch(newmrUrl).then(res => res.json()),
           fetch(spyUrl).then(res => res.json()),
-          fetch(statsUrl).then(res => res.json())
+          fetch(statsUrl).then(res => res.json()),
+          fetch(extendedUrl).then(res => res.json())
         ]);
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
@@ -251,9 +294,30 @@
           </div>
         `;
 
+        const extendedPanel = document.getElementById("extendedPanel");
+        extendedPanel.innerHTML = `
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-label">Paid Commissions</div>
+              <div class="stat-value">$${extended.sum_commission}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Earned Dividends</div>
+              <div class="stat-value">$${extended.sum_dividends}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Average Holding Days</div>
+              <div class="stat-value">${extended.avg_bars}</div>
+            </div>
+          </div>
+        `;
+
       } catch (error) {
         console.error('Error loading data:', error);
         document.getElementById('statsPanel').innerHTML = `
+          <div class="loading">Error loading data. Please try refreshing the page.</div>
+        `;
+        document.getElementById('extendedPanel').innerHTML = `
           <div class="loading">Error loading data. Please try refreshing the page.</div>
         `;
       }
