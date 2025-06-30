@@ -85,13 +85,44 @@
       font-size: 14px;
     }
 
+    .main-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .stats-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
     .chart-container {
-      width: 50% !important;
+      width: 100% !important;
       aspect-ratio: 1/1 !important;
       height: auto !important;
       overflow: hidden !important;
       box-sizing: border-box !important;
-      margin: 0 auto !important;
+    }
+
+    /* Desktop layout - side by side */
+    @media (min-width: 768px) {
+      .main-layout {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      .chart-section {
+        flex: 1;
+        max-width: 50%;
+      }
+
+      .stats-column {
+        flex: 1;
+        max-width: 50%;
+      }
     }
 
     .stats-grid {
@@ -130,7 +161,16 @@
     }
 
     /* Shopify embed optimizations */
-    @media (max-width: 600px) {
+    @media (max-width: 767px) {
+      .main-layout {
+        flex-direction: column !important;
+      }
+
+      .chart-section,
+      .stats-column {
+        max-width: 100% !important;
+      }
+
       .dashboard-container {
         padding: 4px !important;
       }
@@ -202,22 +242,26 @@
 </head>
 <body>
   <div class="dashboard-container">
-    <div class="chart-section">
-      <div class="chart-container">
-        <div id="newmrChart" style="width: 100%; height: 100%;"></div>
+    <div class="main-layout">
+      <div class="chart-section">
+        <div class="chart-container">
+          <div id="newmrChart" style="width: 100%; height: 100%;"></div>
+        </div>
       </div>
-    </div>
 
-    <div class="stats-section">
-      <div id="statsPanel">
-        <div class="loading">Loading statistics...</div>
-      </div>
-    </div>
+      <div class="stats-column">
+        <div class="stats-section">
+          <div id="statsPanel">
+            <div class="loading">Loading statistics...</div>
+          </div>
+        </div>
 
-    <div class="extended-section">
-      <div class="section-title">Trading Details</div>
-      <div id="extendedPanel">
-        <div class="loading">Loading extended data...</div>
+        <div class="extended-section">
+          <div class="section-title">Trading Details</div>
+          <div id="extendedPanel">
+            <div class="loading">Loading extended data...</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
