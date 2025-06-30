@@ -34,62 +34,61 @@
       const chartDom = document.getElementById('newmrChart');
       const myChart = echarts.init(chartDom);
       myChart.setOption({
-        title: {
-          text: 'New MR 2025 vs SPY Benchmark',
-          left: 'center'
-        },
-        tooltip: {
-          trigger: 'axis',
-          formatter: params => {
-            return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
-                   `<br/>Date: ${params[0].axisValue}`;
-          }
-        },
-        legend: {
-          top: 30,
-          data: ['New MR 2025', 'SPY Benchmark']
-        },
-        xAxis: {
-          type: 'category',
-          data: allDates,
-          name: 'Year',
-          axisLabel: {
-            formatter: function (value) {
-              // For "YYYY-MM-DD" format (GitHub JSON usually uses this)
-              if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                return value.slice(2, 4); // "23" for "2023-06-30"
-              }
-              // For "MM/DD/YY"
-              if (/^\d{2}\/\d{2}\/\d{2}$/.test(value)) {
-                return value.slice(6, 8); // "23" for "06/30/23"
-              }
-              // fallback
-              return value;
+      title: {
+        text: 'New MR 2025 vs SPY Benchmark',
+        left: 'center'
+      },
+      color: ['#27ae60', '#e74c3c'], // New MR = green, SPY Benchmark = red
+      tooltip: {
+        trigger: 'axis',
+        formatter: params => {
+          return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
+                 `<br/>Date: ${params[0].axisValue}`;
+        }
+      },
+      legend: {
+        top: 30,
+        data: ['New MR 2025', 'SPY Benchmark']
+      },
+      xAxis: {
+        type: 'category',
+        data: allDates,
+        name: 'Year',
+        axisLabel: {
+          formatter: function (value) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+              return value.slice(2, 4); // "23" for "2023-06-30"
             }
+            return value;
           }
+          // Let ECharts auto-handle intervals for clean axis
+        }
+      },
+      yAxis: {
+        type: 'log',
+        name: 'Equity ($)',
+        axisLabel: {
+          formatter: val => `$${(val/1000).toFixed(0)}k`
+        }
+      },
+      series: [
+        {
+          name: 'New MR 2025',
+          type: 'line',
+          data: newmrEquity,
+          lineStyle: { width: 1.5 },
+          symbol: "none" // No circles
         },
-        yAxis: {
-          type: 'log',
-          name: 'Equity ($)',
-          axisLabel: {
-            formatter: val => `$${(val/1000).toFixed(0)}k`
-          }
-        },
-        series: [
-          {
-            name: 'New MR 2025',
-            type: 'line',
-            data: newmrEquity,
-            lineStyle: { width: 2 }
-          },
-          {
-            name: 'SPY Benchmark',
-            type: 'line',
-            data: spyEquity,
-            lineStyle: { width: 2, type: 'dashed' }
-          }
-        ]
-      });
+        {
+          name: 'SPY Benchmark',
+          type: 'line',
+          data: spyEquity,
+          lineStyle: { width: 1.5 },
+          symbol: "none" // No circles
+        }
+      ]
+    });
+
       
 
       const statPanel = document.getElementById("statsPanel");
