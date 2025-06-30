@@ -2,13 +2,127 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New MR 2025 vs SPY Benchmark</title>
-  <meta name="viewport" content="width=900, initial-scale=1">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .chart-section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .stats-section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+    }
+
+    .chart-container {
+      height: 400px;
+      width: 100%;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-item {
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #64748b;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+      
+      .chart-section,
+      .stats-section {
+        padding: 16px;
+      }
+      
+      .chart-container {
+        height: 300px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .stat-item {
+        padding: 12px;
+      }
+    }
+
+    /* Tablet responsive */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
 </head>
 <body>
-  <div style="max-width:900px; margin:auto; font-family:sans-serif;">
-    <div id="newmrChart" style="height:400px;"></div>
-    <div id="statsPanel" style="margin-top:20px; font-size:15px; line-height:1.6;"></div>
+  <div class="dashboard-container">
+    <div class="chart-section">
+      <div class="chart-container">
+        <div id="newmrChart" style="width: 100%; height: 100%;"></div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div id="statsPanel">
+        <div class="loading">Loading statistics...</div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
@@ -18,94 +132,129 @@
       const spyUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json";
       const statsUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json";
 
-      const [newmrData, spyData, stats] = await Promise.all([
-        fetch(newmrUrl).then(res => res.json()),
-        fetch(spyUrl).then(res => res.json()),
-        fetch(statsUrl).then(res => res.json())
-      ]);
+      try {
+        const [newmrData, spyData, stats] = await Promise.all([
+          fetch(newmrUrl).then(res => res.json()),
+          fetch(spyUrl).then(res => res.json()),
+          fetch(statsUrl).then(res => res.json())
+        ]);
 
-      const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
-      const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
-      const spyMap = new Map(filterValid(spyData).map(d => [d.Date, parseFloat(d.Equity)]));
-      const allDates = Array.from(new Set([...newmrMap.keys(), ...spyMap.keys()])).sort((a, b) => new Date(a) - new Date(b));
-      const newmrEquity = allDates.map(date => newmrMap.get(date) ?? null);
-      const spyEquity = allDates.map(date => spyMap.get(date) ?? null);
+        const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
+        const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
+        const spyMap = new Map(filterValid(spyData).map(d => [d.Date, parseFloat(d.Equity)]));
+        const allDates = Array.from(new Set([...newmrMap.keys(), ...spyMap.keys()])).sort((a, b) => new Date(a) - new Date(b));
+        const newmrEquity = allDates.map(date => newmrMap.get(date) ?? null);
+        const spyEquity = allDates.map(date => spyMap.get(date) ?? null);
 
-      const chartDom = document.getElementById('newmrChart');
-      const myChart = echarts.init(chartDom);
-      myChart.setOption({
-      title: {
-        text: 'New MR 2025 vs SPY Benchmark',
-        left: 'center'
-      },
-      color: ['#27ae60', '#e74c3c'], // New MR = green, SPY Benchmark = red
-      tooltip: {
-        trigger: 'axis',
-        formatter: params => {
-          return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
-                 `<br/>Date: ${params[0].axisValue}`;
-        }
-      },
-      legend: {
-        top: 30,
-        data: ['New MR 2025', 'SPY Benchmark']
-      },
-      xAxis: {
-        type: 'category',
-        data: allDates,
-        name: 'Year',
-        axisLabel: {
-          formatter: function (value) {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-              return value.slice(2, 4); // "23" for "2023-06-30"
+        const chartDom = document.getElementById('newmrChart');
+        const myChart = echarts.init(chartDom);
+        
+        myChart.setOption({
+          title: {
+            text: 'New MR 2025 vs SPY Benchmark',
+            left: 'center'
+          },
+          color: ['#27ae60', '#e74c3c'],
+          tooltip: {
+            trigger: 'axis',
+            formatter: params => {
+              return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
+                     `<br/>Date: ${params[0].axisValue}`;
             }
-            return value;
-          }
-          // Let ECharts auto-handle intervals for clean axis
-        }
-      },
-      yAxis: {
-        type: 'log',
-        name: 'Equity ($)',
-        axisLabel: {
-          formatter: val => `$${(val/1000).toFixed(0)}k`
-        }
-      },
-      series: [
-        {
-          name: 'New MR 2025',
-          type: 'line',
-          data: newmrEquity,
-          lineStyle: { width: 1.5 },
-          symbol: "none" // No circles
-        },
-        {
-          name: 'SPY Benchmark',
-          type: 'line',
-          data: spyEquity,
-          lineStyle: { width: 1.5 },
-          symbol: "none" // No circles
-        }
-      ]
-    });
+          },
+          legend: {
+            top: 30,
+            data: ['New MR 2025', 'SPY Benchmark']
+          },
+          xAxis: {
+            type: 'category',
+            data: allDates,
+            name: 'Year',
+            axisLabel: {
+              formatter: function (value) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                  return value.slice(2, 4);
+                }
+                return value;
+              }
+            }
+          },
+          yAxis: {
+            type: 'log',
+            name: 'Equity ($)',
+            axisLabel: {
+              formatter: val => `$${(val/1000).toFixed(0)}k`
+            }
+          },
+          series: [
+            {
+              name: 'New MR 2025',
+              type: 'line',
+              data: newmrEquity,
+              lineStyle: { width: 1.5 },
+              symbol: "none"
+            },
+            {
+              name: 'SPY Benchmark',
+              type: 'line',
+              data: spyEquity,
+              lineStyle: { width: 1.5 },
+              symbol: "none"
+            }
+          ]
+        });
 
-      
+        // Make chart responsive
+        window.addEventListener('resize', function() {
+          myChart.resize();
+        });
 
-      const statPanel = document.getElementById("statsPanel");
-      statPanel.innerHTML = `
-        <h3 style="margin-bottom:10px;">📊 New MR 2025 Strategy Stats</h3>
-        <ul style="list-style:none; padding-left:0;">
-          <li><strong>Net Profit:</strong> $${stats.NetProfit}</li>
-          <li><strong>Total Trades:</strong> ${stats.Trades}</li>
-          <li><strong>Sharpe Ratio:</strong> ${stats.Sharpe}</li>
-          <li><strong>MAR Ratio:</strong> ${stats.MAR}</li>
-          <li><strong>Max Drawdown:</strong> ${stats.Drawdown}%</li>
-          <li><strong>Expectancy per Trade:</strong> ${stats.Expectancy}</li>
-          <li><strong>Win %:</strong> ${stats.PctWins}</li>
-          <li><strong>Max Exposure:</strong> ${stats.MaxExposure}</li>
-        </ul>
-      `;
+        const statPanel = document.getElementById("statsPanel");
+        statPanel.innerHTML = `
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-label">Net Profit</div>
+              <div class="stat-value">$${stats.NetProfit}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Total Trades</div>
+              <div class="stat-value">${stats.Trades}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Sharpe Ratio</div>
+              <div class="stat-value">${stats.Sharpe}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">MAR Ratio</div>
+              <div class="stat-value">${stats.MAR}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Max Drawdown</div>
+              <div class="stat-value">${stats.Drawdown}%</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Expectancy per Trade</div>
+              <div class="stat-value">${stats.Expectancy}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Win %</div>
+              <div class="stat-value">${stats.PctWins}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Max Exposure</div>
+              <div class="stat-value">${stats.MaxExposure}</div>
+            </div>
+          </div>
+        `;
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('statsPanel').innerHTML = `
+          <div class="loading">Error loading data. Please try refreshing the page.</div>
+        `;
+      }
     }
+
     drawChartAndStats();
   </script>
 </body>
