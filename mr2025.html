@@ -62,6 +62,17 @@
       box-sizing: border-box !important;
     }
 
+    .monthly-table-section {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 12px;
+      margin-top: 12px;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      overflow-x: auto;
+    }
+
     .extended-section::before {
       content: '';
       position: absolute;
@@ -160,6 +171,82 @@
       color: #64748b;
     }
 
+    /* Monthly table styles - exact match to image */
+    .monthly-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 10px;
+      font-family: Arial, sans-serif;
+    }
+
+    .monthly-table th,
+    .monthly-table td {
+      padding: 6px 8px;
+      text-align: center;
+      border: none;
+      font-weight: normal;
+    }
+
+    .monthly-table th {
+      background-color: #ddffdd;
+      font-weight: bold !important;
+      color: #000;
+      font-size: 11px;
+    }
+
+    .monthly-table .year-column {
+      font-weight: bold;
+      color: #000;
+    }
+
+    .monthly-table .total-column {
+      font-weight: bold !important;
+      color: #000;
+    }
+
+    .monthly-table .maxdd-column {
+      font-weight: normal;
+      color: #000;
+    }
+
+    /* Row alternating colors */
+    .monthly-table tr:nth-child(even) {
+      background-color: #f0f0f0;
+    }
+
+    .monthly-table tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+
+    /* Performance color coding - exact match to image */
+    .gain-positive {
+      background-color: inherit !important;
+      color: #000 !important;
+    }
+
+    .gain-negative {
+      background-color: inherit !important;
+      color: #ff0000 !important;
+    }
+
+    .gain-neutral {
+      background-color: inherit !important;
+      color: #000 !important;
+    }
+
+    /* AVG row styling */
+    .monthly-table .avg-row {
+      background-color: #ddffdd !important;
+      font-weight: bold;
+    }
+
+    .monthly-table .avg-row td {
+      background-color: #ddffdd !important;
+      font-weight: bold !important;
+      color: #000 !important;
+    }
+
     /* Shopify embed optimizations */
     @media (max-width: 767px) {
       .main-layout {
@@ -177,7 +264,8 @@
       
       .chart-section,
       .stats-section,
-      .extended-section {
+      .extended-section,
+      .monthly-table-section {
         padding: 8px !important;
         margin-bottom: 8px !important;
       }
@@ -211,6 +299,30 @@
         font-size: 12px !important;
         margin-bottom: 8px !important;
       }
+
+      .monthly-table {
+        font-size: 9px;
+        width: 100%;
+        min-width: 100%;
+      }
+
+      .monthly-table th,
+      .monthly-table td {
+        padding: 3px 1px;
+        font-size: 8px;
+        line-height: 1.2;
+        border: none;
+      }
+
+      .monthly-table th {
+        font-weight: bold !important;
+      }
+
+      .monthly-table-section {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 4px !important;
+      }
     }
 
     /* Very small containers (Shopify widgets) */
@@ -221,7 +333,8 @@
       
       .chart-section,
       .stats-section,
-      .extended-section {
+      .extended-section,
+      .monthly-table-section {
         padding: 6px !important;
         margin-bottom: 6px !important;
       }
@@ -236,6 +349,30 @@
       .stats-grid {
         grid-template-columns: 1fr !important;
         gap: 4px !important;
+      }
+
+      .monthly-table {
+        font-size: 8px;
+        width: 100%;
+        min-width: 600px;
+      }
+
+      .monthly-table th,
+      .monthly-table td {
+        padding: 2px 1px;
+        font-size: 7px;
+        line-height: 1.1;
+        border: none;
+      }
+
+      .monthly-table th {
+        font-weight: bold !important;
+      }
+
+      .monthly-table-section {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 2px !important;
       }
     }
   </style>
@@ -262,6 +399,14 @@
             <div class="loading">Loading extended data...</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Monthly Performance Table Section -->
+    <div class="monthly-table-section">
+      <div class="section-title">Combined Monthly Percent Gains</div>
+      <div id="monthlyTablePanel">
+        <div class="loading">Loading monthly performance data...</div>
       </div>
     </div>
   </div>
@@ -408,6 +553,9 @@
           </div>
         `;
 
+        // Generate monthly performance table
+        generateMonthlyTable();
+
       } catch (error) {
         console.error('Error loading data:', error);
         document.getElementById('statsPanel').innerHTML = `
@@ -415,6 +563,199 @@
         `;
         document.getElementById('extendedPanel').innerHTML = `
           <div class="loading">Error loading data. Please try refreshing the page.</div>
+        `;
+        document.getElementById('monthlyTablePanel').innerHTML = `
+          <div class="loading">Error loading monthly data. Please try refreshing the page.</div>
+        `;
+      }
+    }
+
+    async function generateMonthlyTable() {
+      try {
+        // Fetch data from the actual JSON URL
+        const monthlyUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json";
+        const response = await fetch(monthlyUrl);
+        const rawData = await response.json();
+
+        // Process data to calculate monthly returns
+        const monthlyData = {};
+        const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity));
+        
+        // Sort data by date
+        validData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+        
+        // Group data by year and month, keeping only the last entry for each month
+        validData.forEach(item => {
+          const date = new Date(item.Date);
+          const year = date.getFullYear();
+          const month = date.getMonth(); // 0-based
+          const equity = parseFloat(item.Equity);
+          
+          if (!monthlyData[year]) {
+            monthlyData[year] = {};
+          }
+          
+          monthlyData[year][month] = equity;
+        });
+
+        // Calculate monthly percentage changes and other metrics
+        const monthlyReturns = {};
+        const years = Object.keys(monthlyData).sort();
+        
+        years.forEach(year => {
+          monthlyReturns[year] = {};
+          let yearStartEquity = null;
+          let maxDrawdown = 0;
+          let peak = 0;
+          let lastEquity = null;
+          
+          for (let month = 0; month < 12; month++) {
+            if (monthlyData[year][month] !== undefined) {
+              const currentEquity = monthlyData[year][month];
+              
+              if (yearStartEquity === null) {
+                yearStartEquity = currentEquity;
+                peak = currentEquity;
+                lastEquity = currentEquity;
+              }
+              
+              // Calculate monthly return
+              if (lastEquity !== null) {
+                const monthlyReturn = ((currentEquity - lastEquity) / lastEquity) * 100;
+                monthlyReturns[year][month] = monthlyReturn;
+              }
+              
+              // Update peak and calculate drawdown
+              if (currentEquity > peak) {
+                peak = currentEquity;
+              }
+              const drawdown = ((peak - currentEquity) / peak) * 100;
+              if (drawdown > maxDrawdown) {
+                maxDrawdown = drawdown;
+              }
+              
+              lastEquity = currentEquity;
+            }
+          }
+          
+          // Calculate annual return
+          if (yearStartEquity !== null && lastEquity !== null) {
+            monthlyReturns[year].annual = ((lastEquity - yearStartEquity) / yearStartEquity) * 100;
+          }
+          
+          monthlyReturns[year].maxDrawdown = maxDrawdown;
+        });
+
+        // Calculate averages
+        const monthlyAverages = {};
+        let totalAnnualReturn = 0;
+        let totalMaxDrawdown = 0;
+        let validYears = 0;
+
+        for (let month = 0; month < 12; month++) {
+          let sum = 0;
+          let count = 0;
+          years.forEach(year => {
+            if (monthlyReturns[year][month] !== undefined) {
+              sum += monthlyReturns[year][month];
+              count++;
+            }
+          });
+          monthlyAverages[month] = count > 0 ? sum / count : 0;
+        }
+
+        years.forEach(year => {
+          if (monthlyReturns[year].annual !== undefined) {
+            totalAnnualReturn += monthlyReturns[year].annual;
+            totalMaxDrawdown += monthlyReturns[year].maxDrawdown;
+            validYears++;
+          }
+        });
+
+        const avgAnnualReturn = validYears > 0 ? totalAnnualReturn / validYears : 0;
+        const avgMaxDrawdown = validYears > 0 ? totalMaxDrawdown / validYears : 0;
+
+        // Generate HTML table with exact styling
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let tableHTML = `
+          <table class="monthly-table">
+            <thead>
+              <tr>
+                <th>YEAR</th>
+                ${months.map(month => `<th>${month}</th>`).join('')}
+                <th>TOTAL</th>
+                <th>MaxDD</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        // Add data rows
+        years.forEach(year => {
+          tableHTML += `<tr>`;
+          tableHTML += `<td class="year-column"><strong>${year}</strong></td>`;
+          
+          months.forEach((month, index) => {
+            const value = monthlyReturns[year][index];
+            let cellClass = '';
+            let displayValue = 'n/a';
+            
+            if (value !== undefined && !isNaN(value)) {
+              displayValue = `${value.toFixed(1)}%`;
+              cellClass = value < 0 ? 'gain-negative' : 'gain-positive';
+            }
+            
+            tableHTML += `<td class="${cellClass}">${displayValue}</td>`;
+          });
+          
+          // Total column
+          const totalValue = monthlyReturns[year].annual;
+          let totalClass = '';
+          let totalDisplay = 'n/a';
+          
+          if (totalValue !== undefined && !isNaN(totalValue)) {
+            totalDisplay = `${totalValue.toFixed(1)}%`;
+            totalClass = totalValue < 0 ? 'gain-negative' : 'gain-positive';
+          }
+          
+          tableHTML += `<td class="total-column ${totalClass}"><strong>${totalDisplay}</strong></td>`;
+          
+          // MaxDD column
+          const maxDDValue = monthlyReturns[year].maxDrawdown;
+          let maxDDDisplay = 'n/a';
+          
+          if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
+            maxDDDisplay = `-${maxDDValue.toFixed(1)}%`;
+          }
+          
+          tableHTML += `<td class="maxdd-column gain-negative">${maxDDDisplay}</td>`;
+          tableHTML += `</tr>`;
+        });
+
+        // Add AVG row
+        tableHTML += `<tr class="avg-row">`;
+        tableHTML += `<td class="year-column"><strong>AVG</strong></td>`;
+        months.forEach((month, index) => {
+          const avgValue = monthlyAverages[index];
+          const avgDisplay = `${avgValue.toFixed(1)}%`;
+          const avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
+          tableHTML += `<td class="${avgClass}"><strong>${avgDisplay}</strong></td>`;
+        });
+        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(1)}%</strong></td>`;
+        tableHTML += `<td class="maxdd-column"><strong>-${avgMaxDrawdown.toFixed(1)}%</strong></td>`;
+        tableHTML += `</tr>`;
+
+        tableHTML += `
+            </tbody>
+          </table>
+        `;
+
+        document.getElementById('monthlyTablePanel').innerHTML = tableHTML;
+
+      } catch (error) {
+        console.error('Error generating monthly table:', error);
+        document.getElementById('monthlyTablePanel').innerHTML = `
+          <div class="loading">Error generating monthly performance table from data source.</div>
         `;
       }
     }
