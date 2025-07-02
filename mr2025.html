@@ -413,10 +413,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
   <script>
-    // Helper to extract product handle from Shopify URL
+    // Helper to extract product handle from the iframe URL query string
     function getProductHandle() {
-      const match = window.location.pathname.match(/\/products\/([^/?#]+)/);
-      return match ? match[1] : null;
+      const params = new URLSearchParams(window.location.search);
+      return params.get('handle');
     }
 
     // Mapping from product handle to their respective data URLs
