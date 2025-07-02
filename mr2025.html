@@ -413,12 +413,38 @@
 
   <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
   <script>
-    async function drawChartAndStats() {
-      const newmrUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/newmr2025.json";
-      const spyUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json";
-      const statsUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json";
-      const extendedUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json";
+    // Mapping from full product URLs to their respective data URLs
+    const urlDataMap = {
+      // Product 1: Weekly Pullback Strategy
+      'https://09ggfx-fg.myshopify.com/products/weekly-pullback-strategy?variant=55056844226885': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json',
+        spyUrl: '', // Not provided, leave as empty string or add if needed
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json',
+      },
+      // Product 2: Low Drawdown Nasdaq Mean Reversion Strategy
+      'https://09ggfx-fg.myshopify.com/products/low-drawdown-nasdaq-mean-reversion-strategy?variant=55056870900037': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json',
+        spyUrl: '', // Not provided, leave as empty string or add if needed
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json',
+      },
+      // Add more products as needed
+    };
 
+    // Default URLs (current ones)
+    const defaultUrls = {
+      newmrUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/newmr2025.json",
+      spyUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json",
+      statsUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json",
+      extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json"
+    };
+
+    // Get the URLs for the current page
+    const currentUrls = urlDataMap[window.location.href] || defaultUrls;
+
+    async function drawChartAndStats() {
+      const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
       try {
         const [newmrData, spyData, stats, extended] = await Promise.all([
           fetch(newmrUrl).then(res => res.json()),
