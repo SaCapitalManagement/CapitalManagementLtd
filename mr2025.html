@@ -448,14 +448,25 @@
     const productHandle = getProductHandle();
     const currentUrls = handleDataMap[productHandle] || defaultUrls;
 
+    async function fetchJsonOrLog(url, label) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+        return await res.json();
+      } catch (e) {
+        console.error(`Error fetching ${label} from ${url}:`, e);
+        throw e;
+      }
+    }
+
     async function drawChartAndStats() {
       const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
       try {
         const [newmrData, spyData, stats, extended] = await Promise.all([
-          fetch(newmrUrl).then(res => res.json()),
-          fetch(spyUrl).then(res => res.json()),
-          fetch(statsUrl).then(res => res.json()),
-          fetch(extendedUrl).then(res => res.json())
+          fetchJsonOrLog(newmrUrl, 'newmrUrl'),
+          fetchJsonOrLog(spyUrl, 'spyUrl'),
+          fetchJsonOrLog(statsUrl, 'statsUrl'),
+          fetchJsonOrLog(extendedUrl, 'extendedUrl')
         ]);
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
