@@ -413,17 +413,21 @@
 
   <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
   <script>
-    // Mapping from full product URLs to their respective data URLs
-    const urlDataMap = {
-      // Product 1: Weekly Pullback Strategy
-      'https://09ggfx-fg.myshopify.com/products/weekly-pullback-strategy?variant=55056844226885': {
+    // Helper to extract product handle from Shopify URL
+    function getProductHandle() {
+      const match = window.location.pathname.match(/\/products\/([^/?#]+)/);
+      return match ? match[1] : null;
+    }
+
+    // Mapping from product handle to their respective data URLs
+    const handleDataMap = {
+      'weekly-pullback-strategy': {
         newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json',
         spyUrl: '', // Not provided, leave as empty string or add if needed
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json',
       },
-      // Product 2: Low Drawdown Nasdaq Mean Reversion Strategy
-      'https://09ggfx-fg.myshopify.com/products/low-drawdown-nasdaq-mean-reversion-strategy?variant=55056870900037': {
+      'low-drawdown-nasdaq-mean-reversion-strategy': {
         newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json',
         spyUrl: '', // Not provided, leave as empty string or add if needed
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json',
@@ -440,8 +444,9 @@
       extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json"
     };
 
-    // Get the URLs for the current page
-    const currentUrls = urlDataMap[window.location.href] || defaultUrls;
+    // Get the URLs for the current product handle
+    const productHandle = getProductHandle();
+    const currentUrls = handleDataMap[productHandle] || defaultUrls;
 
     async function drawChartAndStats() {
       const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
