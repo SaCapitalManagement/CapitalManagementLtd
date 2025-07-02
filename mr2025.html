@@ -462,12 +462,13 @@
     async function drawChartAndStats() {
       const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
       try {
-        const [newmrData, spyData, stats, extended] = await Promise.all([
+        const fetches = [
           fetchJsonOrLog(newmrUrl, 'newmrUrl'),
-          fetchJsonOrLog(spyUrl, 'spyUrl'),
+          spyUrl ? fetchJsonOrLog(spyUrl, 'spyUrl') : Promise.resolve([]),
           fetchJsonOrLog(statsUrl, 'statsUrl'),
           fetchJsonOrLog(extendedUrl, 'extendedUrl')
-        ]);
+        ];
+        const [newmrData, spyData, stats, extended] = await Promise.all(fetches);
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
         const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
