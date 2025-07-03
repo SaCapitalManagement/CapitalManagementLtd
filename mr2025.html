@@ -667,7 +667,6 @@
         const response = await fetch(monthlyUrl);
         const rawData = await response.json();
 
-        // Process data to calculate monthly returns
         // Group data by year and month, keep all entries
         const monthlyData = {};
         const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity));
@@ -681,10 +680,9 @@
           monthlyData[year][month].push(parseFloat(item.Equity));
         });
 
-        // Calculate monthly returns: (lastEquity - firstEquity) / firstEquity * 100
+        // Calculate monthly log returns: 100 * Math.log(lastEquity / firstEquity)
         const monthlyReturns = {};
         const years = Object.keys(monthlyData).sort();
-        let prevYearLastEquity = null;
         years.forEach(year => {
           monthlyReturns[year] = {};
           let yearStartEquity = null;
@@ -697,9 +695,9 @@
               const firstEquity = equities[0];
               const lastEquityMonth = equities[equities.length - 1];
               if (yearStartEquity === null) yearStartEquity = firstEquity;
-              // Monthly return for this month
-              if (firstEquity !== 0) {
-                monthlyReturns[year][month] = ((lastEquityMonth - firstEquity) / firstEquity) * 100;
+              // Monthly log return for this month
+              if (firstEquity > 0 && equities.length > 1) {
+                monthlyReturns[year][month] = 100 * Math.log(lastEquityMonth / firstEquity);
               } else {
                 monthlyReturns[year][month] = null;
               }
@@ -710,7 +708,7 @@
               lastEquity = lastEquityMonth;
             }
           }
-          // Calculate annual return
+          // Calculate annual return (arithmetic, for consistency)
           if (yearStartEquity !== null && lastEquity !== null) {
             monthlyReturns[year].annual = ((lastEquity - yearStartEquity) / yearStartEquity) * 100;
           }
@@ -772,7 +770,7 @@
             let displayValue = 'n/a';
             
             if (value !== undefined && value !== null && !isNaN(value)) {
-              displayValue = `${value.toFixed(1)}%`;
+              displayValue = `${value.toFixed(2)}%`;
               cellClass = value < 0 ? 'gain-negative' : 'gain-positive';
             }
             
@@ -785,7 +783,7 @@
           let totalDisplay = 'n/a';
           
           if (totalValue !== undefined && totalValue !== null && !isNaN(totalValue)) {
-            totalDisplay = `${totalValue.toFixed(1)}%`;
+            totalDisplay = `${totalValue.toFixed(2)}%`;
             totalClass = totalValue < 0 ? 'gain-negative' : 'gain-positive';
           }
           
@@ -795,7 +793,7 @@
           const maxDDValue = monthlyReturns[year].maxDrawdown;
           let maxDDDisplay = 'n/a';
           if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
-            maxDDDisplay = `-${maxDDValue.toFixed(1)}%`;
+            maxDDDisplay = `-${maxDDValue.toFixed(2)}%`;
           }
           tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>${maxDDDisplay}</strong></td>`;
           tableHTML += `</tr>`;
@@ -806,12 +804,12 @@
         tableHTML += `<td class="year-column"><strong>AVG</strong></td>`;
         months.forEach((month, index) => {
           const avgValue = monthlyAverages[index];
-          const avgDisplay = `${avgValue.toFixed(1)}%`;
+          const avgDisplay = `${avgValue.toFixed(2)}%`;
           const avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
           tableHTML += `<td class="${avgClass}"><strong>${avgDisplay}</strong></td>`;
         });
-        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(1)}%</strong></td>`;
-        tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>-${avgMaxDrawdown.toFixed(1)}%</strong></td>`;
+        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(2)}%</strong></td>`;
+        tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>-${avgMaxDrawdown.toFixed(2)}%</strong></td>`;
         tableHTML += `</tr>`;
 
         tableHTML += `
