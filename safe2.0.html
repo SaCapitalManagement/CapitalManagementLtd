@@ -413,19 +413,62 @@
 
   <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
   <script>
-    async function drawChartAndStats() {
-      const newmrUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/newmr2025.json";
-      const spyUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json";
-      const statsUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json";
-      const extendedUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json";
+    // Helper to extract product handle from the iframe URL query string
+    function getProductHandle() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('handle');
+    }
 
+    // Mapping from product handle to their respective data URLs
+    const handleDataMap = {
+      'weekly-pullback-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json',
+        spyUrl: '', // Not provided, leave as empty string or add if needed
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json',
+      },
+      'low-drawdown-nasdaq-mean-reversion-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json',
+        spyUrl: '', // Not provided, leave as empty string or add if needed
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json',
+      },
+      // Add more products as needed
+    };
+
+    // Default URLs (current ones)
+    const defaultUrls = {
+      newmrUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/newmr2025.json",
+      spyUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json",
+      statsUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json",
+      extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json"
+    };
+
+    // Get the URLs for the current product handle
+    const productHandle = getProductHandle();
+    const currentUrls = handleDataMap[productHandle] || defaultUrls;
+
+    async function fetchJsonOrLog(url, label) {
       try {
-        const [newmrData, spyData, stats, extended] = await Promise.all([
-          fetch(newmrUrl).then(res => res.json()),
-          fetch(spyUrl).then(res => res.json()),
-          fetch(statsUrl).then(res => res.json()),
-          fetch(extendedUrl).then(res => res.json())
-        ]);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+        return await res.json();
+      } catch (e) {
+        console.error(`Error fetching ${label} from ${url}:`, e);
+        throw e;
+      }
+    }
+
+    async function drawChartAndStats() {
+      const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
+      try {
+        const fetches = [
+          fetchJsonOrLog(newmrUrl, 'newmrUrl'),
+          spyUrl ? fetchJsonOrLog(spyUrl, 'spyUrl') : Promise.resolve([]),
+          fetchJsonOrLog(statsUrl, 'statsUrl'),
+          fetchJsonOrLog(extendedUrl, 'extendedUrl')
+        ];
+        const [newmrData, spyData, stats, extended] = await Promise.all(fetches);
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
         const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
