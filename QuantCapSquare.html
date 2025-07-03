@@ -509,6 +509,7 @@
 
     async function drawChartAndStats() {
       const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
+      console.log('Using URLs:', currentUrls); // Debug: show which URLs are being used
       try {
         const [newmrData, spyData, stats, extended] = await Promise.all([
           fetchJsonOrLog(newmrUrl, 'newmrUrl'),
@@ -516,6 +517,11 @@
           fetchJsonOrLog(statsUrl, 'statsUrl'),
           fetchJsonOrLog(extendedUrl, 'extendedUrl')
         ]);
+        // Debug: show fetched data
+        console.log('Fetched newmrData:', newmrData);
+        console.log('Fetched spyData:', spyData);
+        console.log('Fetched stats:', stats);
+        console.log('Fetched extended:', extended);
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
         const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
