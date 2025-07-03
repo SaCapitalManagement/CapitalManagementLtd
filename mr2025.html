@@ -680,7 +680,7 @@
           monthlyData[year][month].push(parseFloat(item.Equity));
         });
 
-        // Calculate monthly log returns: 100 * Math.log(lastEquity / firstEquity)
+        // Calculate monthly arithmetic returns: (lastEquity - firstEquity) / firstEquity * 100
         const monthlyReturns = {};
         const years = Object.keys(monthlyData).sort();
         years.forEach(year => {
@@ -695,9 +695,9 @@
               const firstEquity = equities[0];
               const lastEquityMonth = equities[equities.length - 1];
               if (yearStartEquity === null) yearStartEquity = firstEquity;
-              // Monthly log return for this month
+              // Monthly arithmetic return for this month
               if (firstEquity > 0 && equities.length > 1) {
-                monthlyReturns[year][month] = 100 * Math.log(lastEquityMonth / firstEquity);
+                monthlyReturns[year][month] = ((lastEquityMonth - firstEquity) / firstEquity) * 100;
               } else {
                 monthlyReturns[year][month] = null;
               }
@@ -708,7 +708,7 @@
               lastEquity = lastEquityMonth;
             }
           }
-          // Calculate annual return (arithmetic, for consistency)
+          // Calculate annual return (arithmetic)
           if (yearStartEquity !== null && lastEquity !== null) {
             monthlyReturns[year].annual = ((lastEquity - yearStartEquity) / yearStartEquity) * 100;
           }
