@@ -643,48 +643,45 @@
         // Calculate monthly percentage changes and other metrics
         const monthlyReturns = {};
         const years = Object.keys(monthlyData).sort();
-        
-        years.forEach(year => {
+        let prevYearLastEquity = null;
+        years.forEach((year, yearIdx) => {
           monthlyReturns[year] = {};
           let yearStartEquity = null;
           let maxDrawdown = 0;
           let peak = 0;
           let lastEquity = null;
-          
           for (let month = 0; month < 12; month++) {
             if (monthlyData[year][month] !== undefined) {
               const currentEquity = monthlyData[year][month];
-              
               if (yearStartEquity === null) {
                 yearStartEquity = currentEquity;
                 peak = currentEquity;
+                // For January, use prevYearLastEquity if available
+                if (month === 0 && prevYearLastEquity !== null) {
+                  const monthlyReturn = ((currentEquity - prevYearLastEquity) / prevYearLastEquity) * 100;
+                  monthlyReturns[year][month] = monthlyReturn;
+                }
                 lastEquity = currentEquity;
+                if (month === 0) continue; // Skip the rest for the first month
               }
-              
-              // Calculate monthly return
+              // For other months, use lastEquity
               if (lastEquity !== null) {
                 const monthlyReturn = ((currentEquity - lastEquity) / lastEquity) * 100;
                 monthlyReturns[year][month] = monthlyReturn;
               }
-              
               // Update peak and calculate drawdown
-              if (currentEquity > peak) {
-                peak = currentEquity;
-              }
+              if (currentEquity > peak) peak = currentEquity;
               const drawdown = ((peak - currentEquity) / peak) * 100;
-              if (drawdown > maxDrawdown) {
-                maxDrawdown = drawdown;
-              }
-              
+              if (drawdown > maxDrawdown) maxDrawdown = drawdown;
               lastEquity = currentEquity;
             }
           }
-          
+          // Save last equity of December for next year
+          prevYearLastEquity = monthlyData[year][11] !== undefined ? monthlyData[year][11] : lastEquity;
           // Calculate annual return
           if (yearStartEquity !== null && lastEquity !== null) {
             monthlyReturns[year].annual = ((lastEquity - yearStartEquity) / yearStartEquity) * 100;
           }
-          
           monthlyReturns[year].maxDrawdown = maxDrawdown;
         });
 
