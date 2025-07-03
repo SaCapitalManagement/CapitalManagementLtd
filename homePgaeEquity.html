@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Strategy Equity Curve</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: transparent;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+      overflow-x: hidden;
+      width: 100%;
+      height: auto;
+      box-sizing: border-box;
+    }
+    .dashboard-container {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 8px !important;
+      box-sizing: border-box !important;
+    }
+    .chart-section {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 12px;
+      margin-bottom: 12px;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    .chart-container {
+      width: 100% !important;
+      aspect-ratio: 1/1 !important;
+      height: auto !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+    @media (min-width: 768px) {
+      .main-layout {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .chart-section {
+        flex: 1;
+        max-width: 100%;
+      }
+    }
+    @media (max-width: 767px) {
+      .main-layout { flex-direction: column !important; }
+      .chart-section { max-width: 100% !important; }
+      .dashboard-container { padding: 4px !important; }
+      .chart-section { padding: 8px !important; margin-bottom: 8px !important; }
+      .chart-container { width: 70% !important; aspect-ratio: 1/1 !important; height: auto !important; margin: 0 auto !important; }
+    }
+    @media (max-width: 400px) {
+      .dashboard-container { padding: 2px !important; }
+      .chart-section { padding: 6px !important; margin-bottom: 6px !important; }
+      .chart-container { width: 80% !important; aspect-ratio: 1/1 !important; height: auto !important; margin: 0 auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <div class="main-layout">
+      <div class="chart-section">
+        <div class="chart-container">
+          <div id="newmrChart" style="width: 100%; height: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+  <script>
+    // Hardcoded URLs for all-time high mean reversion and SPY benchmark
+    const newmrUrl = 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmr.json';
+    const spyUrl = 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json';
+
+    async function drawEquityCurve() {
+      try {
+        const [newmrData, spyData] = await Promise.all([
+          fetch(newmrUrl).then(res => res.json()),
+          fetch(spyUrl).then(res => res.json())
+        ]);
+        const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
+        const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
+        const spyMap = new Map(filterValid(spyData).map(d => [d.Date, parseFloat(d.Equity)]));
+        const allDates = Array.from(new Set([...newmrMap.keys(), ...spyMap.keys()])).sort((a, b) => new Date(a) - new Date(b));
+        const newmrEquity = allDates.map(date => newmrMap.get(date) ?? null);
+        const spyEquity = allDates.map(date => spyMap.get(date) ?? null);
+        const chartDom = document.getElementById('newmrChart');
+        const myChart = echarts.init(chartDom);
+        myChart.setOption({
+          title: {
+            text: 'Strategy Equity Curve',
+            left: 'center'
+          },
+          color: ['#27ae60', '#e74c3c'],
+          tooltip: {
+            trigger: 'axis',
+            formatter: params => {
+              return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
+                     `<br/>Date: ${params[0].axisValue}`;
+            }
+          },
+          legend: {
+            top: 30,
+            data: ['Strategy', 'SPY Buy & Hold']
+          },
+          xAxis: {
+            type: 'category',
+            data: allDates,
+            name: 'Year',
+            axisLabel: {
+              formatter: function (value) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                  return value.slice(2, 4);
+                }
+                return value;
+              }
+            }
+          },
+          yAxis: {
+            type: 'log',
+            axisLabel: {
+              formatter: val => `$${(val/1000).toFixed(0)}k`
+            }
+          },
+          series: [
+            {
+              name: 'Strategy',
+              type: 'line',
+              data: newmrEquity,
+              lineStyle: { width: 1.5 },
+              symbol: "none"
+            },
+            {
+              name: 'SPY Buy & Hold',
+              type: 'line',
+              data: spyEquity,
+              lineStyle: { width: 1.5 },
+              symbol: "none"
+            }
+          ]
+        });
+        window.addEventListener('resize', function() {
+          myChart.resize();
+        });
+      } catch (error) {
+        document.getElementById('newmrChart').innerHTML = '<div class="loading">Error loading equity data.</div>';
+      }
+    }
+    drawEquityCurve();
+  </script>
+  <script>
+  function sendHeightToParent() {
+    const height = document.body.scrollHeight;
+    parent.postMessage({ type: 'setIframeHeight', height: height }, '*');
+  }
+  window.addEventListener('load', sendHeightToParent);
+  window.addEventListener('resize', sendHeightToParent);
+</script>
+</body>
+</html>
