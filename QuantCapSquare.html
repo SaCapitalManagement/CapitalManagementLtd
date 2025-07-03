@@ -529,7 +529,7 @@
         
         myChart.setOption({
           title: {
-            text: 'New MR 2025 vs SPY Benchmark',
+            text: 'Strategy Equity Curve',
             left: 'center'
           },
           color: ['#27ae60', '#e74c3c'],
@@ -542,7 +542,7 @@
           },
           legend: {
             top: 30,
-            data: ['New MR 2025', 'SPY Benchmark']
+            data: ['Strategy', 'SPY Buy & Hold']
           },
           xAxis: {
             type: 'category',
@@ -559,21 +559,20 @@
           },
           yAxis: {
             type: 'log',
-            name: 'Equity ($)',
             axisLabel: {
               formatter: val => `$${(val/1000).toFixed(0)}k`
             }
           },
           series: [
             {
-              name: 'New MR 2025',
+              name: 'Strategy',
               type: 'line',
               data: newmrEquity,
               lineStyle: { width: 1.5 },
               symbol: "none"
             },
             {
-              name: 'SPY Benchmark',
+              name: 'SPY Buy & Hold',
               type: 'line',
               data: spyEquity,
               lineStyle: { width: 1.5 },
