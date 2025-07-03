@@ -668,58 +668,46 @@
         const rawData = await response.json();
 
         // Process data to calculate monthly returns
+        // Group data by year and month, keep all entries
         const monthlyData = {};
         const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity));
-        
-        // Sort data by date
         validData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
-        
-        // Group data by year and month, keeping only the last entry for each month
         validData.forEach(item => {
           const date = new Date(item.Date);
           const year = date.getFullYear();
-          const month = date.getMonth(); // 0-based
-          const equity = parseFloat(item.Equity);
-          
-          if (!monthlyData[year]) {
-            monthlyData[year] = {};
-          }
-          
-          monthlyData[year][month] = equity;
+          const month = date.getMonth();
+          if (!monthlyData[year]) monthlyData[year] = {};
+          if (!monthlyData[year][month]) monthlyData[year][month] = [];
+          monthlyData[year][month].push(parseFloat(item.Equity));
         });
 
-        // Calculate monthly percentage changes and other metrics
+        // Calculate monthly returns: (lastEquity - firstEquity) / firstEquity * 100
         const monthlyReturns = {};
         const years = Object.keys(monthlyData).sort();
-        let prevMonthEquity = null;
-        years.forEach((year, yearIdx) => {
+        let prevYearLastEquity = null;
+        years.forEach(year => {
           monthlyReturns[year] = {};
           let yearStartEquity = null;
           let maxDrawdown = 0;
           let peak = 0;
           let lastEquity = null;
           for (let month = 0; month < 12; month++) {
-            if (monthlyData[year][month] !== undefined) {
-              const currentEquity = monthlyData[year][month];
-              if (yearStartEquity === null) {
-                yearStartEquity = currentEquity;
-                peak = currentEquity;
-              }
-              // Calculate monthly return as change from previous available month
-              if (prevMonthEquity !== null) {
-                const monthlyReturn = ((currentEquity - prevMonthEquity) / prevMonthEquity) * 100;
-                monthlyReturns[year][month] = monthlyReturn;
+            const equities = monthlyData[year][month];
+            if (equities && equities.length > 0) {
+              const firstEquity = equities[0];
+              const lastEquityMonth = equities[equities.length - 1];
+              if (yearStartEquity === null) yearStartEquity = firstEquity;
+              // Monthly return for this month
+              if (firstEquity !== 0) {
+                monthlyReturns[year][month] = ((lastEquityMonth - firstEquity) / firstEquity) * 100;
               } else {
-                monthlyReturns[year][month] = null; // n/a for very first month if no previous
+                monthlyReturns[year][month] = null;
               }
-              // Update peak and calculate drawdown
-              if (currentEquity > peak) peak = currentEquity;
-              const drawdown = ((peak - currentEquity) / peak) * 100;
+              // For drawdown calculation
+              if (peak < lastEquityMonth) peak = lastEquityMonth;
+              const drawdown = ((peak - lastEquityMonth) / peak) * 100;
               if (drawdown > maxDrawdown) maxDrawdown = drawdown;
-              lastEquity = currentEquity;
-              prevMonthEquity = currentEquity;
-            } else {
-              // If no data for this month, do not update prevMonthEquity
+              lastEquity = lastEquityMonth;
             }
           }
           // Calculate annual return
