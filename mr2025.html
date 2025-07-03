@@ -423,13 +423,13 @@
     const handleDataMap = {
       'weekly-pullback-strategy': {
         newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json',
-        spyUrl: '', // Not provided, leave as empty string or add if needed
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json',
       },
       'low-drawdown-nasdaq-mean-reversion-strategy': {
         newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json',
-        spyUrl: '', // Not provided, leave as empty string or add if needed
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json',
       },
@@ -462,13 +462,12 @@
     async function drawChartAndStats() {
       const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
       try {
-        const fetches = [
+        const [newmrData, spyData, stats, extended] = await Promise.all([
           fetchJsonOrLog(newmrUrl, 'newmrUrl'),
-          spyUrl ? fetchJsonOrLog(spyUrl, 'spyUrl') : Promise.resolve([]),
+          fetchJsonOrLog(spyUrl, 'spyUrl'),
           fetchJsonOrLog(statsUrl, 'statsUrl'),
           fetchJsonOrLog(extendedUrl, 'extendedUrl')
-        ];
-        const [newmrData, spyData, stats, extended] = await Promise.all(fetches);
+        ]);
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
         const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
@@ -616,7 +615,7 @@
     async function generateMonthlyTable() {
       try {
         // Fetch data from the actual JSON URL
-        const monthlyUrl = "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json";
+        const monthlyUrl = currentUrls.newmrUrl;
         const response = await fetch(monthlyUrl);
         const rawData = await response.json();
 
