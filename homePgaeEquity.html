@@ -56,8 +56,8 @@
 
     .chart-container {
       width: 100% !important;
-      height: 500px !important;
-      min-height: 400px !important;
+      aspect-ratio: 1/1 !important;
+      height: auto !important;
       overflow: hidden !important;
       box-sizing: border-box !important;
       border-radius: 8px;
@@ -125,8 +125,10 @@
       }
       
       .chart-container {
-        height: 400px !important;
-        min-height: 300px !important;
+        width: 70% !important;
+        aspect-ratio: 1/1 !important;
+        height: auto !important;
+        margin: 0 auto !important;
       }
     }
 
@@ -147,8 +149,10 @@
       }
       
       .chart-container {
-        height: 350px !important;
-        min-height: 280px !important;
+        width: 80% !important;
+        aspect-ratio: 1/1 !important;
+        height: auto !important;
+        margin: 0 auto !important;
       }
     }
 
@@ -168,8 +172,10 @@
       }
       
       .chart-container {
-        height: 300px !important;
-        min-height: 250px !important;
+        width: 90% !important;
+        aspect-ratio: 1/1 !important;
+        height: auto !important;
+        margin: 0 auto !important;
       }
     }
 
@@ -270,6 +276,14 @@
         const newmr2025Equity = allDates.map(date => newmr2025Map.get(date) ?? null);
         const spyEquity = allDates.map(date => spyMap.get(date) ?? null);
 
+        // Process dates to show years only once
+        const processedDates = allDates.map((date, index) => {
+          if (index === 0) return date;
+          const currentYear = date.slice(0, 4);
+          const prevYear = allDates[index - 1].slice(0, 4);
+          return currentYear !== prevYear ? date : '';
+        });
+
         if (!chart) return;
 
         const option = {
@@ -305,6 +319,7 @@
           xAxis: {
             type: 'category',
             data: allDates,
+            name: 'Year',
             boundaryGap: false,
             axisLine: {
               lineStyle: {
@@ -314,14 +329,9 @@
             axisLabel: {
               color: '#64748b',
               fontSize: 11,
-              formatter: function (value, index) {
+              formatter: function (value) {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                  const year = value.slice(0, 4);
-                  // Only show year labels for January 1st or first occurrence of each year
-                  if (value.endsWith('-01-01') || index === 0) {
-                    return year;
-                  }
-                  return '';
+                  return value.slice(2, 4);
                 }
                 return value;
               }
