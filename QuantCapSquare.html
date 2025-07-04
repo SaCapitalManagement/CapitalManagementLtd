@@ -478,7 +478,7 @@
       'spy-mean-reversion': {
         newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmr.json',
         spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
-        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrt_stats.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrxt_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrx.json',
       },
       // Add more products as needed
@@ -625,6 +625,8 @@
         `;
 
         const extendedPanel = document.getElementById("extendedPanel");
+        // Show 0 if dividends are 0 or negative
+        const safeDividends = (extended.sum_dividends > 0) ? extended.sum_dividends : 0;
         extendedPanel.innerHTML = `
           <div class="stats-grid">
             <div class="stat-item">
@@ -633,7 +635,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">Earned Dividends</div>
-              <div class="stat-value">$${extended.sum_dividends}</div>
+              <div class="stat-value">$${safeDividends}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Average Holding Days</div>
