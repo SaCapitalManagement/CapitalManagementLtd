@@ -540,8 +540,6 @@
     const productHandle = getProductHandle();
     const currentUrls = handleDataMap[productHandle] || defaultUrls;
 
-    console.log("No data mapping found for handle:", productHandle);
-
     async function fetchJsonOrLog(url, label) {
       try {
         const res = await fetch(url);
