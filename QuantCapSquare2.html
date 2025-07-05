@@ -1034,8 +1034,8 @@
         `;
 
         const extendedPanel = document.getElementById("extendedPanel");
-        // Show 0 if dividends are 0 or negative
-        const safeDividends = (extended.sum_dividends > 0) ? extended.sum_dividends : 0;
+        // Show 0 if dividends are 0 or negative, otherwise show original value
+        const safeDividends = (extended.sum_dividends <= 0) ? 0 : extended.sum_dividends;
         extendedPanel.innerHTML = `
           <div class="stats-grid">
             <div class="stat-item">
