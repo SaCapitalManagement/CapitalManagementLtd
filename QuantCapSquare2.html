@@ -663,9 +663,8 @@
         `;
 
         const extendedPanel = document.getElementById("extendedPanel");
-        // Parse dividends string to number and show 0 if 0 or negative
-        const dividendsValue = parseFloat(extended.sum_dividends.toString().replace(/,/g, ''));
-        const safeDividends = (dividendsValue > 0) ? extended.sum_dividends : '0';
+        // Show 0 if dividends are 0 or negative
+        const safeDividends = (extended.sum_dividends > 0) ? extended.sum_dividends : 0;
         extendedPanel.innerHTML = `
           <div class="stats-grid">
             <div class="stat-item">
