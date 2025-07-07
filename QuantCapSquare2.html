@@ -73,16 +73,6 @@
       overflow-x: auto;
     }
 
-    .correlation-section {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      padding: 12px;
-      margin-top: 12px;
-      width: 100% !important;
-      box-sizing: border-box !important;
-    }
-
     .extended-section::before {
       content: '';
       position: absolute;
@@ -122,13 +112,6 @@
       width: 100% !important;
       aspect-ratio: 1/1 !important;
       height: auto !important;
-      overflow: hidden !important;
-      box-sizing: border-box !important;
-    }
-
-    .correlation-chart-container {
-      width: 100% !important;
-      height: 300px !important;
       overflow: hidden !important;
       box-sizing: border-box !important;
     }
@@ -282,8 +265,7 @@
       .chart-section,
       .stats-section,
       .extended-section,
-      .monthly-table-section,
-      .correlation-section {
+      .monthly-table-section {
         padding: 8px !important;
         margin-bottom: 8px !important;
       }
@@ -293,10 +275,6 @@
         aspect-ratio: 1/1 !important;
         height: auto !important;
         margin: 0 auto !important;
-      }
-
-      .correlation-chart-container {
-        height: 250px !important;
       }
       
       .stats-grid {
@@ -356,8 +334,7 @@
       .chart-section,
       .stats-section,
       .extended-section,
-      .monthly-table-section,
-      .correlation-section {
+      .monthly-table-section {
         padding: 6px !important;
         margin-bottom: 6px !important;
       }
@@ -367,10 +344,6 @@
         aspect-ratio: 1/1 !important;
         height: auto !important;
         margin: 0 auto !important;
-      }
-
-      .correlation-chart-container {
-        height: 200px !important;
       }
       
       .stats-grid {
@@ -436,43 +409,14 @@
         <div class="loading">Loading monthly performance data...</div>
       </div>
     </div>
-
-    <!-- Correlation Analysis Section -->
-    <div class="correlation-section">
-      <div class="section-title">Correlation Analysis</div>
-      <div id="correlationPanel">
-        <div class="loading">Loading correlation data...</div>
-      </div>
-    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
   <script>
     // Helper to extract product handle from the iframe URL query string
     function getProductHandle() {
-      // Try multiple methods to get the handle
       const params = new URLSearchParams(window.location.search);
-      let handle = params.get('handle');
-      
-      // If no handle in query params, try to extract from URL path
-      if (!handle) {
-        const path = window.location.pathname;
-        const pathSegments = path.split('/').filter(segment => segment.length > 0);
-        
-        // Look for known product handles in the path
-        for (const segment of pathSegments) {
-          if (handleDataMap[segment]) {
-            handle = segment;
-            break;
-          }
-        }
-      }
-      
-      // For testing purposes, uncomment and set a specific strategy:
-      handle = 'weekly-pullback-strategy';
-      
-      console.log('Detected Product Handle:', handle);
-      return handle;
+      return params.get('handle');
     }
 
     // Mapping from product handle to their respective data URLs
@@ -537,6 +481,7 @@
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrxt_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrx.json',
       },
+      // Add more products as needed
     };
 
     // Default URLs (current ones)
@@ -550,10 +495,6 @@
     // Get the URLs for the current product handle
     const productHandle = getProductHandle();
     const currentUrls = handleDataMap[productHandle] || defaultUrls;
-    
-    // Debug logging to confirm correct strategy loading
-    console.log('Product Handle:', productHandle);
-    console.log('Loading strategy data from:', currentUrls);
 
     async function fetchJsonOrLog(url, label) {
       try {
@@ -568,7 +509,6 @@
 
     async function drawChartAndStats() {
       const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
-      console.log('Starting data fetch with URLs:', { newmrUrl, spyUrl, statsUrl, extendedUrl });
       try {
         const [newmrData, spyData, stats, extended] = await Promise.all([
           fetchJsonOrLog(newmrUrl, 'newmrUrl'),
@@ -576,7 +516,6 @@
           fetchJsonOrLog(statsUrl, 'statsUrl'),
           fetchJsonOrLog(extendedUrl, 'extendedUrl')
         ]);
-        console.log('Data fetched successfully:', { newmrData: newmrData?.length, spyData: spyData?.length, stats, extended });
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
         const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
@@ -686,18 +625,8 @@
         `;
 
         const extendedPanel = document.getElementById("extendedPanel");
-        
-        // Use dividends exactly as they come from the JSON file
-        // Only show 0 if the value is actually 0 or negative, otherwise show the exact value
-        let displayDividends = "0";
-        if (extended.sum_dividends) {
-          const dividendStr = extended.sum_dividends.toString();
-          const dividendNum = parseFloat(dividendStr.replace(/,/g, ''));
-          if (dividendNum > 0) {
-            displayDividends = dividendStr; // Use original string format with commas
-          }
-        }
-        
+        // Show 0 if dividends are 0 or negative
+        const safeDividends = (extended.sum_dividends > 0) ? extended.sum_dividends : 0;
         extendedPanel.innerHTML = `
           <div class="stats-grid">
             <div class="stat-item">
@@ -706,7 +635,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">Earned Dividends</div>
-              <div class="stat-value">$${displayDividends}</div>
+              <div class="stat-value">$${safeDividends}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Average Holding Days</div>
@@ -718,23 +647,16 @@
         // Generate monthly performance table
         generateMonthlyTable();
 
-        // Generate correlation analysis
-        generateCorrelationAnalysis();
-
       } catch (error) {
         console.error('Error loading data:', error);
-        console.error('Error stack:', error.stack);
         document.getElementById('statsPanel').innerHTML = `
-          <div class="loading">Error loading data: ${error.message}. Please try refreshing the page.</div>
+          <div class="loading">Error loading data. Please try refreshing the page.</div>
         `;
         document.getElementById('extendedPanel').innerHTML = `
-          <div class="loading">Error loading data: ${error.message}. Please try refreshing the page.</div>
+          <div class="loading">Error loading data. Please try refreshing the page.</div>
         `;
         document.getElementById('monthlyTablePanel').innerHTML = `
-          <div class="loading">Error loading monthly data: ${error.message}. Please try refreshing the page.</div>
-        `;
-        document.getElementById('correlationPanel').innerHTML = `
-          <div class="loading">Error loading correlation data: ${error.message}. Please try refreshing the page.</div>
+          <div class="loading">Error loading monthly data. Please try refreshing the page.</div>
         `;
       }
     }
@@ -868,37 +790,27 @@
           
           tableHTML += `<td class="total-column ${totalClass}"><strong>${totalDisplay}</strong></td>`;
           
-          // MaxDD column
-          const ddValue = monthlyReturns[year].maxDrawdown;
-          let ddDisplay = 'n/a';
-          
-          if (ddValue !== undefined && ddValue !== null && !isNaN(ddValue)) {
-            ddDisplay = `${ddValue.toFixed(2)}%`;
+          // MaxDD column (always black text)
+          const maxDDValue = monthlyReturns[year].maxDrawdown;
+          let maxDDDisplay = 'n/a';
+          if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
+            maxDDDisplay = `-${maxDDValue.toFixed(2)}%`;
           }
-          
-          tableHTML += `<td class="maxdd-column">${ddDisplay}</td>`;
+          tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>${maxDDDisplay}</strong></td>`;
           tableHTML += `</tr>`;
         });
 
         // Add AVG row
         tableHTML += `<tr class="avg-row">`;
-        tableHTML += `<td><strong>AVG</strong></td>`;
-        
+        tableHTML += `<td class="year-column"><strong>AVG</strong></td>`;
         months.forEach((month, index) => {
           const avgValue = monthlyAverages[index];
-          let avgDisplay = avgValue.toFixed(2) + '%';
-          let avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
+          const avgDisplay = `${avgValue.toFixed(2)}%`;
+          const avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
           tableHTML += `<td class="${avgClass}"><strong>${avgDisplay}</strong></td>`;
         });
-        
-        // AVG Total
-        const avgTotalDisplay = avgAnnualReturn.toFixed(2) + '%';
-        const avgTotalClass = avgAnnualReturn < 0 ? 'gain-negative' : 'gain-positive';
-        tableHTML += `<td class="${avgTotalClass}"><strong>${avgTotalDisplay}</strong></td>`;
-        
-        // AVG MaxDD
-        const avgDDDisplay = avgMaxDrawdown.toFixed(2) + '%';
-        tableHTML += `<td><strong>${avgDDDisplay}</strong></td>`;
+        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(2)}%</strong></td>`;
+        tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>-${avgMaxDrawdown.toFixed(2)}%</strong></td>`;
         tableHTML += `</tr>`;
 
         tableHTML += `
@@ -911,390 +823,22 @@
       } catch (error) {
         console.error('Error generating monthly table:', error);
         document.getElementById('monthlyTablePanel').innerHTML = `
-          <div class="loading">Error loading monthly data. Please try refreshing the page.</div>
+          <div class="loading">Error generating monthly performance table from data source.</div>
         `;
       }
     }
 
-    // Function to calculate correlation coefficient
-    function calculateCorrelation(x, y) {
-      if (x.length !== y.length || x.length === 0) return 0;
-      
-      const n = x.length;
-      const sumX = x.reduce((a, b) => a + b, 0);
-      const sumY = y.reduce((a, b) => a + b, 0);
-      const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
-      const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
-      const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
-      
-      const numerator = n * sumXY - sumX * sumY;
-      const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-      
-      return denominator === 0 ? 0 : numerator / denominator;
-    }
-
-    // Function to calculate returns from equity values
-    function calculateReturns(equityValues) {
-      const returns = [];
-      for (let i = 1; i < equityValues.length; i++) {
-        if (equityValues[i-1] > 0) {
-          returns.push((equityValues[i] - equityValues[i-1]) / equityValues[i-1]);
-        }
-      }
-      return returns;
-    }
-
-    async function generateCorrelationAnalysis() {
-      try {
-        // Get current strategy handle and determine current strategy name
-        const productHandle = getProductHandle();
-        const currentUrls = handleDataMap[productHandle] || defaultUrls;
-        
-        // Get all strategy URLs
-        const allStrategies = Object.keys(handleDataMap);
-        const strategyHandleToName = {
-          'weekly-pullback-strategy': 'Weekly Pullback',
-          'low-drawdown-nasdaq-mean-reversion-strategy': 'NASDAQ Mean Reversion',
-          'all-time-high-mean-reversion-strategy': 'ATH Mean Reversion',
-          'etf-rotate-monthly-rebalance-investing-strategy': 'ETF Rotation',
-          'mean-reversion-trading-strategy-for-2025': 'New MR 2025',
-          'modern-breakout-strategy': 'Breakout Strategy',
-          'nasdaq-100-mean-reversion-strategy': 'NASDAQ 100 MR',
-          'parabolic-short-selling-strategy': 'Short Selling',
-          'short-term-mean-reversion-strategy': 'Short Term MR',
-          'spy-mean-reversion': 'SPY Mean Reversion'
-        };
-
-        const currentStrategyName = strategyHandleToName[productHandle] || 'New MR 2025';
-        
-        // All strategy names
-        const allStrategyNames = Object.values(strategyHandleToName);
-
-        // Strategy URLs for links
-        const strategyUrls = {
-          'Weekly Pullback': 'https://sacapitalmanagement.com/products/weekly-pullback-strategy',
-          'NASDAQ Mean Reversion': 'https://sacapitalmanagement.com/products/low-drawdown-nasdaq-mean-reversion-strategy',
-          'ATH Mean Reversion': 'https://sacapitalmanagement.com/products/all-time-high-mean-reversion-strategy',
-          'ETF Rotation': 'https://sacapitalmanagement.com/products/etf-rotate-monthly-rebalance-investing-strategy',
-          'New MR 2025': 'https://sacapitalmanagement.com/products/mean-reversion-trading-strategy-for-2025',
-          'Breakout Strategy': 'https://sacapitalmanagement.com/products/modern-breakout-strategy',
-          'NASDAQ 100 MR': 'https://sacapitalmanagement.com/products/nasdaq-100-mean-reversion-strategy',
-          'Short Selling': 'https://sacapitalmanagement.com/products/parabolic-short-selling-strategy',
-          'Short Term MR': 'https://sacapitalmanagement.com/products/short-term-mean-reversion-strategy',
-          'SPY Mean Reversion': 'https://sacapitalmanagement.com/products/spy-mean-reversion'
-        };
-
-        // Fetch all strategy data
-        const allData = {};
-        const fetchPromises = [];
-        
-        for (let i = 0; i < allStrategies.length; i++) {
-          const strategy = allStrategies[i];
-          const strategyName = allStrategyNames[i];
-          const url = handleDataMap[strategy].newmrUrl;
-          fetchPromises.push(
-            fetchJsonOrLog(url, `strategy-${i}`).then(data => {
-              allData[strategyName] = data;
-            }).catch(error => {
-              console.error(`Error fetching ${strategy}:`, error);
-              allData[strategyName] = null;
-            })
-          );
-        }
-
-        await Promise.all(fetchPromises);
-
-        // Process data and calculate correlations
-        const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
-        
-        // Find common dates across all strategies
-        let commonDates = null;
-        
-        for (const [name, data] of Object.entries(allData)) {
-          if (data && data.length > 0) {
-            const validData = filterValid(data);
-            const dates = validData.map(d => d.Date).sort((a, b) => new Date(a) - new Date(b));
-            
-            if (commonDates === null) {
-              commonDates = dates;
-            } else {
-              commonDates = commonDates.filter(date => dates.includes(date));
-            }
-          }
-        }
-
-        if (!commonDates || commonDates.length < 10) {
-          throw new Error('Not enough common dates for correlation analysis');
-        }
-
-        // Calculate returns for each strategy
-        const strategyReturns = {};
-        for (const [name, data] of Object.entries(allData)) {
-          if (data && data.length > 0) {
-            const validData = filterValid(data);
-            const dataMap = new Map(validData.map(d => [d.Date, parseFloat(d.Equity)]));
-            const equityValues = commonDates.map(date => dataMap.get(date)).filter(val => val !== undefined);
-            
-            if (equityValues.length > 1) {
-              strategyReturns[name] = calculateReturns(equityValues);
-            }
-          }
-        }
-
-        // Create correlation data for current strategy vs all others
-        const otherStrategies = allStrategyNames.filter(name => name !== currentStrategyName);
-        const correlationData = [];
-        
-        if (strategyReturns[currentStrategyName]) {
-          for (const otherStrategy of otherStrategies) {
-            if (strategyReturns[otherStrategy]) {
-              const corr = calculateCorrelation(strategyReturns[currentStrategyName], strategyReturns[otherStrategy]);
-              correlationData.push({
-                strategy: otherStrategy,
-                correlation: corr
-              });
-            }
-          }
-        }
-
-        // Create heatmap data for single row
-        const heatmapData = [];
-        for (let i = 0; i < correlationData.length; i++) {
-          heatmapData.push([i, 0, correlationData[i].correlation]);
-        }
-
-        document.getElementById('correlationPanel').innerHTML = `
-          <div class="correlation-chart-container">
-            <div id="correlationChart" style="width: 100%; height: 100%;"></div>
-          </div>
-        `;
-
-        // Initialize the correlation heatmap
-        setTimeout(() => {
-          const correlationChartDom = document.getElementById('correlationChart');
-          if (correlationChartDom) {
-            const correlationChart = echarts.init(correlationChartDom);
-            const otherStrategyNames = correlationData.map(d => d.strategy);
-            
-            correlationChart.setOption({
-              title: {
-                text: `${currentStrategyName} vs Other Strategies`,
-                left: 'center',
-                textStyle: {
-                  fontSize: 14,
-                  color: 'black',
-                  fontWeight: 'bold'
-                }
-              },
-              grid: {
-                top: 60,
-                bottom: 80,
-                left: 120,
-                right: 20,
-                containLabel: true
-              },
-              tooltip: {
-                trigger: 'item',
-                formatter: function(params) {
-                  return `${currentStrategyName} vs ${otherStrategyNames[params.value[0]]}<br/>Correlation: ${params.value[2].toFixed(3)}`;
-                },
-                backgroundColor: 'white',
-                borderColor: 'gray',
-                borderWidth: 1,
-                textStyle: {
-                  color: 'black',
-                  fontSize: 12
-                }
-              },
-              xAxis: {
-                type: 'category',
-                data: otherStrategyNames,
-                axisLabel: {
-                  rotate: 45,
-                  fontSize: 10,
-                  color: '#0066CC'
-                },
-                axisLine: {
-                  lineStyle: {
-                    color: 'lightgray'
-                  }
-                },
-                triggerEvent: true
-              },
-              yAxis: {
-                type: 'category',
-                data: [currentStrategyName],
-                axisLabel: {
-                  fontSize: 10,
-                  color: 'black',
-                  fontWeight: 'bold'
-                },
-                axisLine: {
-                  lineStyle: {
-                    color: 'lightgray'
-                  }
-                }
-              },
-              visualMap: {
-                show: false,
-                min: -1,
-                max: 1,
-                inRange: {
-                  color: ['#ff0000', '#ffffff', '#22c55e']
-                }
-              },
-              series: [{
-                name: 'Correlation',
-                type: 'heatmap',
-                data: heatmapData,
-                label: {
-                  show: true,
-                  formatter: function(params) {
-                    return params.value[2].toFixed(2);
-                  },
-                  fontSize: 10,
-                  color: 'black',
-                  fontWeight: 'bold',
-                  position: 'inside',
-                  align: 'center',
-                  verticalAlign: 'middle'
-                },
-                emphasis: {
-                  disabled: true
-                },
-                itemStyle: {
-                  borderColor: 'white',
-                  borderWidth: 1
-                }
-              }]
-            });
-
-            // Add responsive grid adjustments
-            function updateGridForScreenSize() {
-              const width = window.innerWidth;
-              let gridConfig = {
-                top: 60,
-                bottom: 80,
-                left: 120,
-                right: 20,
-                containLabel: true
-              };
-
-              if (width <= 400) {
-                gridConfig = {
-                  top: 50,
-                  bottom: 100,
-                  left: 100,
-                  right: 10,
-                  containLabel: true
-                };
-                correlationChart.setOption({
-                  title: {
-                    textStyle: { fontSize: 12 }
-                  },
-                  xAxis: {
-                    axisLabel: { fontSize: 8, rotate: 45 }
-                  },
-                  yAxis: {
-                    axisLabel: { fontSize: 8 }
-                  },
-                  series: [{
-                    label: { fontSize: 8 }
-                  }]
-                });
-              } else if (width <= 767) {
-                gridConfig = {
-                  top: 55,
-                  bottom: 90,
-                  left: 110,
-                  right: 15,
-                  containLabel: true
-                };
-                correlationChart.setOption({
-                  title: {
-                    textStyle: { fontSize: 13 }
-                  },
-                  xAxis: {
-                    axisLabel: { fontSize: 9, rotate: 45 }
-                  },
-                  yAxis: {
-                    axisLabel: { fontSize: 9 }
-                  },
-                  series: [{
-                    label: { fontSize: 9 }
-                  }]
-                });
-              } else {
-                correlationChart.setOption({
-                  title: {
-                    textStyle: { fontSize: 14 }
-                  },
-                  xAxis: {
-                    axisLabel: { fontSize: 10, rotate: 45 }
-                  },
-                  yAxis: {
-                    axisLabel: { fontSize: 10 }
-                  },
-                  series: [{
-                    label: { fontSize: 10 }
-                  }]
-                });
-              }
-
-              correlationChart.setOption({
-                grid: gridConfig
-              });
-            }
-
-            // Initial grid setup
-            updateGridForScreenSize();
-
-            // Update grid on window resize
-            window.addEventListener('resize', function() {
-              correlationChart.resize();
-              updateGridForScreenSize();
-            });
-
-            // Add click event for x-axis labels (other strategies)
-            correlationChart.on('click', function(params) {
-              if (params.componentType === 'xAxis') {
-                const strategyName = params.value;
-                const url = strategyUrls[strategyName];
-                if (url) {
-                  window.open(url, '_blank');
-                }
-              }
-            });
-          }
-        }, 500);
-
-      } catch (error) {
-        console.error('Error generating correlation analysis:', error);
-        document.getElementById('correlationPanel').innerHTML = `
-          <div class="loading">Error loading correlation data between strategies. Please try refreshing the page.</div>
-        `;
-      }
-    }
-
-    // Initialize the dashboard
-    function initDashboard() {
-      console.log('ECharts available:', typeof echarts !== 'undefined');
-      if (typeof echarts === 'undefined') {
-        console.error('ECharts library not loaded!');
-        document.getElementById('statsPanel').innerHTML = '<div class="loading">Chart library not loaded. Please refresh the page.</div>';
-        return;
-      }
-      
-      // Start loading data
-      drawChartAndStats();
-    }
-    
-    // Wait for page to load then initialize
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initDashboard);
-    } else {
-      initDashboard();
-    }
+    drawChartAndStats();
   </script>
+  <script>
+  function sendHeightToParent() {
+    const height = document.body.scrollHeight;
+    parent.postMessage({ type: 'setIframeHeight', height: height }, '*');
+  }
+
+  window.addEventListener('load', sendHeightToParent);
+  window.addEventListener('resize', sendHeightToParent);
+</script>
+
 </body>
 </html>
