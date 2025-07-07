@@ -132,16 +132,6 @@
       margin-top: 10px;
     }
 
-    .correlation-axis-label {
-      cursor: pointer;
-      color: #0066CC;
-      text-decoration: underline;
-    }
-
-    .correlation-axis-label:hover {
-      color: #004499;
-    }
-
     /* Desktop layout - side by side */
     @media (min-width: 768px) {
       .main-layout {
@@ -539,6 +529,10 @@
     // Get the URLs for the current product handle
     const productHandle = getProductHandle();
     const currentUrls = handleDataMap[productHandle] || defaultUrls;
+    
+    // Debug logging to confirm correct strategy loading
+    console.log('Product Handle:', productHandle);
+    console.log('Loading strategy data from:', currentUrls);
 
     async function fetchJsonOrLog(url, label) {
       try {
@@ -551,11 +545,336 @@
       }
     }
 
+    async function drawChartAndStats() {
+      const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
+      try {
+        const [newmrData, spyData, stats, extended] = await Promise.all([
+          fetchJsonOrLog(newmrUrl, 'newmrUrl'),
+          fetchJsonOrLog(spyUrl, 'spyUrl'),
+          fetchJsonOrLog(statsUrl, 'statsUrl'),
+          fetchJsonOrLog(extendedUrl, 'extendedUrl')
+        ]);
+
+        const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
+        const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
+        const spyMap = new Map(filterValid(spyData).map(d => [d.Date, parseFloat(d.Equity)]));
+        const allDates = Array.from(new Set([...newmrMap.keys(), ...spyMap.keys()])).sort((a, b) => new Date(a) - new Date(b));
+        const newmrEquity = allDates.map(date => newmrMap.get(date) ?? null);
+        const spyEquity = allDates.map(date => spyMap.get(date) ?? null);
+
+        const chartDom = document.getElementById('newmrChart');
+        const myChart = echarts.init(chartDom);
+        
+        myChart.setOption({
+          title: {
+            text: 'Strategy Equity Curve',
+            left: 'center'
+          },
+          color: ['#27ae60', '#e74c3c'],
+          tooltip: {
+            trigger: 'axis',
+            formatter: params => {
+              return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
+                     `<br/>Date: ${params[0].axisValue}`;
+            }
+          },
+          legend: {
+            top: 30,
+            data: ['Strategy', 'SPY Buy & Hold']
+          },
+          xAxis: {
+            type: 'category',
+            data: allDates,
+            name: 'Year',
+            axisLabel: {
+              formatter: function (value) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                  return value.slice(2, 4);
+                }
+                return value;
+              }
+            }
+          },
+          yAxis: {
+            type: 'log',
+            axisLabel: {
+              formatter: val => `$${(val/1000).toFixed(0)}k`
+            }
+          },
+          series: [
+            {
+              name: 'Strategy',
+              type: 'line',
+              data: newmrEquity,
+              lineStyle: { width: 1.5 },
+              symbol: "none"
+            },
+            {
+              name: 'SPY Buy & Hold',
+              type: 'line',
+              data: spyEquity,
+              lineStyle: { width: 1.5 },
+              symbol: "none"
+            }
+          ]
+        });
+
+        // Make chart responsive
+        window.addEventListener('resize', function() {
+          myChart.resize();
+        });
+
+        const statPanel = document.getElementById("statsPanel");
+        statPanel.innerHTML = `
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-label">Net Profit</div>
+              <div class="stat-value">$${stats.NetProfit}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Total Trades</div>
+              <div class="stat-value">${stats.Trades}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Sharpe Ratio</div>
+              <div class="stat-value">${stats.Sharpe}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">MAR Ratio</div>
+              <div class="stat-value">${stats.MAR}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Max Drawdown</div>
+              <div class="stat-value">${stats.Drawdown}%</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Expectancy per Trade</div>
+              <div class="stat-value">${stats.Expectancy}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Win %</div>
+              <div class="stat-value">${stats.PctWins}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Max Exposure</div>
+              <div class="stat-value">${stats.MaxExposure}</div>
+            </div>
+          </div>
+        `;
+
+        const extendedPanel = document.getElementById("extendedPanel");
+        // Parse dividends string to number and show 0 if 0 or negative
+        const dividendsValue = parseFloat(extended.sum_dividends.toString().replace(/,/g, ''));
+        const safeDividends = (dividendsValue > 0) ? extended.sum_dividends : '0';
+        extendedPanel.innerHTML = `
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-label">Paid Commissions</div>
+              <div class="stat-value">$${extended.sum_commission}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Earned Dividends</div>
+              <div class="stat-value">$${safeDividends}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Average Holding Days</div>
+              <div class="stat-value">${extended.avg_bars}</div>
+            </div>
+          </div>
+        `;
+
+        // Generate monthly performance table
+        generateMonthlyTable();
+
+        // Generate correlation analysis
+        generateCorrelationAnalysis();
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('statsPanel').innerHTML = `
+          <div class="loading">Error loading data. Please try refreshing the page.</div>
+        `;
+        document.getElementById('extendedPanel').innerHTML = `
+          <div class="loading">Error loading data. Please try refreshing the page.</div>
+        `;
+        document.getElementById('monthlyTablePanel').innerHTML = `
+          <div class="loading">Error loading monthly data. Please try refreshing the page.</div>
+        `;
+      }
+    }
+
+    async function generateMonthlyTable() {
+      try {
+        // Fetch data from the actual JSON URL
+        const monthlyUrl = currentUrls.newmrUrl;
+        const response = await fetch(monthlyUrl);
+        const rawData = await response.json();
+
+        // Group data by year and month, keep all entries
+        const monthlyData = {};
+        const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity));
+        validData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+        validData.forEach(item => {
+          const date = new Date(item.Date);
+          const year = date.getFullYear();
+          const month = date.getMonth();
+          if (!monthlyData[year]) monthlyData[year] = {};
+          if (!monthlyData[year][month]) monthlyData[year][month] = [];
+          monthlyData[year][month].push(parseFloat(item.Equity));
+        });
+
+        // Calculate monthly arithmetic returns: (lastEquity - firstEquity) / firstEquity * 100
+        const monthlyReturns = {};
+        const years = Object.keys(monthlyData).sort();
+        years.forEach(year => {
+          monthlyReturns[year] = {};
+          let yearStartEquity = null;
+          let maxDrawdown = 0;
+          let peak = 0;
+          let lastEquity = null;
+          for (let month = 0; month < 12; month++) {
+            const equities = monthlyData[year][month];
+            if (equities && equities.length > 0) {
+              const firstEquity = equities[0];
+              const lastEquityMonth = equities[equities.length - 1];
+              if (yearStartEquity === null) yearStartEquity = firstEquity;
+              // Monthly arithmetic return for this month
+              if (firstEquity > 0 && equities.length > 1) {
+                monthlyReturns[year][month] = ((lastEquityMonth - firstEquity) / firstEquity) * 100;
+              } else {
+                monthlyReturns[year][month] = null;
+              }
+              // For drawdown calculation
+              if (peak < lastEquityMonth) peak = lastEquityMonth;
+              const drawdown = ((peak - lastEquityMonth) / peak) * 100;
+              if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+              lastEquity = lastEquityMonth;
+            }
+          }
+          // Calculate annual return (arithmetic)
+          if (yearStartEquity !== null && lastEquity !== null) {
+            monthlyReturns[year].annual = ((lastEquity - yearStartEquity) / yearStartEquity) * 100;
+          }
+          monthlyReturns[year].maxDrawdown = maxDrawdown;
+        });
+
+        // Calculate averages
+        const monthlyAverages = {};
+        let totalAnnualReturn = 0;
+        let totalMaxDrawdown = 0;
+        let validYears = 0;
+
+        for (let month = 0; month < 12; month++) {
+          let sum = 0;
+          let count = 0;
+          years.forEach(year => {
+            if (monthlyReturns[year][month] !== undefined && monthlyReturns[year][month] !== null) {
+              sum += monthlyReturns[year][month];
+              count++;
+            }
+          });
+          monthlyAverages[month] = count > 0 ? sum / count : 0;
+        }
+
+        years.forEach(year => {
+          if (monthlyReturns[year].annual !== undefined) {
+            totalAnnualReturn += monthlyReturns[year].annual;
+            totalMaxDrawdown += monthlyReturns[year].maxDrawdown;
+            validYears++;
+          }
+        });
+
+        const avgAnnualReturn = validYears > 0 ? totalAnnualReturn / validYears : 0;
+        const avgMaxDrawdown = validYears > 0 ? totalMaxDrawdown / validYears : 0;
+
+        // Generate HTML table with exact styling
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let tableHTML = `
+          <table class="monthly-table">
+            <thead>
+              <tr>
+                <th>YEAR</th>
+                ${months.map(month => `<th>${month}</th>`).join('')}
+                <th>TOTAL</th>
+                <th>MaxDD</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        // Add data rows
+        years.forEach(year => {
+          tableHTML += `<tr>`;
+          tableHTML += `<td class="year-column"><strong>${year}</strong></td>`;
+          
+          months.forEach((month, index) => {
+            const value = monthlyReturns[year][index];
+            let cellClass = '';
+            let displayValue = 'n/a';
+            
+            if (value !== undefined && value !== null && !isNaN(value)) {
+              displayValue = `${value.toFixed(2)}%`;
+              cellClass = value < 0 ? 'gain-negative' : 'gain-positive';
+            }
+            
+            tableHTML += `<td class="${cellClass}">${displayValue}</td>`;
+          });
+          
+          // Total column
+          const totalValue = monthlyReturns[year].annual;
+          let totalClass = '';
+          let totalDisplay = 'n/a';
+          
+          if (totalValue !== undefined && totalValue !== null && !isNaN(totalValue)) {
+            totalDisplay = `${totalValue.toFixed(2)}%`;
+            totalClass = totalValue < 0 ? 'gain-negative' : 'gain-positive';
+          }
+          
+          tableHTML += `<td class="total-column ${totalClass}"><strong>${totalDisplay}</strong></td>`;
+          
+          // MaxDD column (always black text)
+          const maxDDValue = monthlyReturns[year].maxDrawdown;
+          let maxDDDisplay = 'n/a';
+          if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
+            maxDDDisplay = `-${maxDDValue.toFixed(2)}%`;
+          }
+          tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>${maxDDDisplay}</strong></td>`;
+          tableHTML += `</tr>`;
+        });
+
+        // Add AVG row
+        tableHTML += `<tr class="avg-row">`;
+        tableHTML += `<td class="year-column"><strong>AVG</strong></td>`;
+        months.forEach((month, index) => {
+          const avgValue = monthlyAverages[index];
+          const avgDisplay = `${avgValue.toFixed(2)}%`;
+          const avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
+          tableHTML += `<td class="${avgClass}"><strong>${avgDisplay}</strong></td>`;
+        });
+        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(2)}%</strong></td>`;
+        tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>-${avgMaxDrawdown.toFixed(2)}%</strong></td>`;
+        tableHTML += `</tr>`;
+
+        tableHTML += `
+            </tbody>
+          </table>
+        `;
+
+        document.getElementById('monthlyTablePanel').innerHTML = tableHTML;
+
+      } catch (error) {
+        console.error('Error generating monthly table:', error);
+        document.getElementById('monthlyTablePanel').innerHTML = `
+          <div class="loading">Error generating monthly performance table from data source.</div>
+        `;
+      }
+    }
+
     // Function to calculate correlation coefficient
     function calculateCorrelation(x, y) {
-      const n = x.length;
-      if (n !== y.length || n === 0) return 0;
+      if (x.length !== y.length || x.length === 0) return 0;
       
+      const n = x.length;
       const sumX = x.reduce((a, b) => a + b, 0);
       const sumY = y.reduce((a, b) => a + b, 0);
       const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
@@ -910,333 +1229,6 @@
         console.error('Error generating correlation analysis:', error);
         document.getElementById('correlationPanel').innerHTML = `
           <div class="loading">Error loading correlation data between strategies. Please try refreshing the page.</div>
-        `;
-      }
-    }
-
-    async function drawChartAndStats() {
-      const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
-      try {
-        const [newmrData, spyData, stats, extended] = await Promise.all([
-          fetchJsonOrLog(newmrUrl, 'newmrUrl'),
-          fetchJsonOrLog(spyUrl, 'spyUrl'),
-          fetchJsonOrLog(statsUrl, 'statsUrl'),
-          fetchJsonOrLog(extendedUrl, 'extendedUrl')
-        ]);
-
-        const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
-        const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
-        const spyMap = new Map(filterValid(spyData).map(d => [d.Date, parseFloat(d.Equity)]));
-        const allDates = Array.from(new Set([...newmrMap.keys(), ...spyMap.keys()])).sort((a, b) => new Date(a) - new Date(b));
-        const newmrEquity = allDates.map(date => newmrMap.get(date) ?? null);
-        const spyEquity = allDates.map(date => spyMap.get(date) ?? null);
-
-        const chartDom = document.getElementById('newmrChart');
-        const myChart = echarts.init(chartDom);
-        
-        myChart.setOption({
-          title: {
-            text: 'Strategy Equity Curve',
-            left: 'center'
-          },
-          color: ['#27ae60', '#e74c3c'],
-          tooltip: {
-            trigger: 'axis',
-            formatter: params => {
-              return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
-                     `<br/>Date: ${params[0].axisValue}`;
-            }
-          },
-          legend: {
-            top: 30,
-            data: ['Strategy', 'SPY Buy & Hold']
-          },
-          xAxis: {
-            type: 'category',
-            data: allDates,
-            name: 'Year',
-            axisLabel: {
-              formatter: function (value) {
-                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                  return value.slice(2, 4);
-                }
-                return value;
-              }
-            }
-          },
-          yAxis: {
-            type: 'log',
-            axisLabel: {
-              formatter: val => `$${(val/1000).toFixed(0)}k`
-            }
-          },
-          series: [
-            {
-              name: 'Strategy',
-              type: 'line',
-              data: newmrEquity,
-              lineStyle: { width: 1.5 },
-              symbol: "none"
-            },
-            {
-              name: 'SPY Buy & Hold',
-              type: 'line',
-              data: spyEquity,
-              lineStyle: { width: 1.5 },
-              symbol: "none"
-            }
-          ]
-        });
-
-        // Make chart responsive
-        window.addEventListener('resize', function() {
-          myChart.resize();
-        });
-
-        const statPanel = document.getElementById("statsPanel");
-        statPanel.innerHTML = `
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-label">Net Profit</div>
-              <div class="stat-value">$${stats.NetProfit}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Total Trades</div>
-              <div class="stat-value">${stats.Trades}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Sharpe Ratio</div>
-              <div class="stat-value">${stats.Sharpe}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">MAR Ratio</div>
-              <div class="stat-value">${stats.MAR}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Max Drawdown</div>
-              <div class="stat-value">${stats.Drawdown}%</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Expectancy per Trade</div>
-              <div class="stat-value">${stats.Expectancy}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Win %</div>
-              <div class="stat-value">${stats.PctWins}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Max Exposure</div>
-              <div class="stat-value">${stats.MaxExposure}</div>
-            </div>
-          </div>
-        `;
-
-        const extendedPanel = document.getElementById("extendedPanel");
-        // Show 0 if dividends are 0 or negative, otherwise show original value
-        const safeDividends = (extended.sum_dividends <= 0) ? 0 : extended.sum_dividends;
-        extendedPanel.innerHTML = `
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-label">Paid Commissions</div>
-              <div class="stat-value">$${extended.sum_commission}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Earned Dividends</div>
-              <div class="stat-value">$${safeDividends}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">Average Holding Days</div>
-              <div class="stat-value">${extended.avg_bars}</div>
-            </div>
-          </div>
-        `;
-
-        // Generate monthly performance table
-        generateMonthlyTable();
-
-        // Generate correlation analysis
-        generateCorrelationAnalysis();
-
-      } catch (error) {
-        console.error('Error loading data:', error);
-        document.getElementById('statsPanel').innerHTML = `
-          <div class="loading">Error loading data. Please try refreshing the page.</div>
-        `;
-        document.getElementById('extendedPanel').innerHTML = `
-          <div class="loading">Error loading data. Please try refreshing the page.</div>
-        `;
-        document.getElementById('monthlyTablePanel').innerHTML = `
-          <div class="loading">Error loading monthly data. Please try refreshing the page.</div>
-        `;
-        document.getElementById('correlationPanel').innerHTML = `
-          <div class="loading">Error loading correlation data. Please try refreshing the page.</div>
-        `;
-      }
-    }
-
-    async function generateMonthlyTable() {
-      try {
-        // Fetch data from the actual JSON URL
-        const monthlyUrl = currentUrls.newmrUrl;
-        const response = await fetch(monthlyUrl);
-        const rawData = await response.json();
-
-        // Group data by year and month, keep all entries
-        const monthlyData = {};
-        const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity));
-        validData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
-        validData.forEach(item => {
-          const date = new Date(item.Date);
-          const year = date.getFullYear();
-          const month = date.getMonth();
-          if (!monthlyData[year]) monthlyData[year] = {};
-          if (!monthlyData[year][month]) monthlyData[year][month] = [];
-          monthlyData[year][month].push(parseFloat(item.Equity));
-        });
-
-        // Calculate monthly arithmetic returns: (lastEquity - firstEquity) / firstEquity * 100
-        const monthlyReturns = {};
-        const years = Object.keys(monthlyData).sort();
-        years.forEach(year => {
-          monthlyReturns[year] = {};
-          let yearStartEquity = null;
-          let maxDrawdown = 0;
-          let peak = 0;
-          let lastEquity = null;
-          for (let month = 0; month < 12; month++) {
-            const equities = monthlyData[year][month];
-            if (equities && equities.length > 0) {
-              const firstEquity = equities[0];
-              const lastEquityMonth = equities[equities.length - 1];
-              if (yearStartEquity === null) yearStartEquity = firstEquity;
-              // Monthly arithmetic return for this month
-              if (firstEquity > 0 && equities.length > 1) {
-                monthlyReturns[year][month] = ((lastEquityMonth - firstEquity) / firstEquity) * 100;
-              } else {
-                monthlyReturns[year][month] = null;
-              }
-              // For drawdown calculation
-              if (peak < lastEquityMonth) peak = lastEquityMonth;
-              const drawdown = ((peak - lastEquityMonth) / peak) * 100;
-              if (drawdown > maxDrawdown) maxDrawdown = drawdown;
-              lastEquity = lastEquityMonth;
-            }
-          }
-          // Calculate annual return (arithmetic)
-          if (yearStartEquity !== null && lastEquity !== null) {
-            monthlyReturns[year].annual = ((lastEquity - yearStartEquity) / yearStartEquity) * 100;
-          }
-          monthlyReturns[year].maxDrawdown = maxDrawdown;
-        });
-
-        // Calculate averages
-        const monthlyAverages = {};
-        let totalAnnualReturn = 0;
-        let totalMaxDrawdown = 0;
-        let validYears = 0;
-
-        for (let month = 0; month < 12; month++) {
-          let sum = 0;
-          let count = 0;
-          years.forEach(year => {
-            if (monthlyReturns[year][month] !== undefined && monthlyReturns[year][month] !== null) {
-              sum += monthlyReturns[year][month];
-              count++;
-            }
-          });
-          monthlyAverages[month] = count > 0 ? sum / count : 0;
-        }
-
-        years.forEach(year => {
-          if (monthlyReturns[year].annual !== undefined) {
-            totalAnnualReturn += monthlyReturns[year].annual;
-            totalMaxDrawdown += monthlyReturns[year].maxDrawdown;
-            validYears++;
-          }
-        });
-
-        const avgAnnualReturn = validYears > 0 ? totalAnnualReturn / validYears : 0;
-        const avgMaxDrawdown = validYears > 0 ? totalMaxDrawdown / validYears : 0;
-
-        // Generate HTML table with exact styling
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        let tableHTML = `
-          <table class="monthly-table">
-            <thead>
-              <tr>
-                <th>YEAR</th>
-                ${months.map(month => `<th>${month}</th>`).join('')}
-                <th>TOTAL</th>
-                <th>MaxDD</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        // Add data rows
-        years.forEach(year => {
-          tableHTML += `<tr>`;
-          tableHTML += `<td class="year-column"><strong>${year}</strong></td>`;
-          
-          months.forEach((month, index) => {
-            const value = monthlyReturns[year][index];
-            let cellClass = '';
-            let displayValue = 'n/a';
-            
-            if (value !== undefined && value !== null && !isNaN(value)) {
-              displayValue = `${value.toFixed(2)}%`;
-              cellClass = value < 0 ? 'gain-negative' : 'gain-positive';
-            }
-            
-            tableHTML += `<td class="${cellClass}">${displayValue}</td>`;
-          });
-          
-          // Total column
-          const totalValue = monthlyReturns[year].annual;
-          let totalClass = '';
-          let totalDisplay = 'n/a';
-          
-          if (totalValue !== undefined && totalValue !== null && !isNaN(totalValue)) {
-            totalDisplay = `${totalValue.toFixed(2)}%`;
-            totalClass = totalValue < 0 ? 'gain-negative' : 'gain-positive';
-          }
-          
-          tableHTML += `<td class="total-column ${totalClass}"><strong>${totalDisplay}</strong></td>`;
-          
-          // MaxDD column (always black text)
-          const maxDDValue = monthlyReturns[year].maxDrawdown;
-          let maxDDDisplay = 'n/a';
-          if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
-            maxDDDisplay = `-${maxDDValue.toFixed(2)}%`;
-          }
-          tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>${maxDDDisplay}</strong></td>`;
-          tableHTML += `</tr>`;
-        });
-
-        // Add AVG row
-        tableHTML += `<tr class="avg-row">`;
-        tableHTML += `<td class="year-column"><strong>AVG</strong></td>`;
-        months.forEach((month, index) => {
-          const avgValue = monthlyAverages[index];
-          const avgDisplay = `${avgValue.toFixed(2)}%`;
-          const avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
-          tableHTML += `<td class="${avgClass}"><strong>${avgDisplay}</strong></td>`;
-        });
-        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(2)}%</strong></td>`;
-        tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>-${avgMaxDrawdown.toFixed(2)}%</strong></td>`;
-        tableHTML += `</tr>`;
-
-        tableHTML += `
-            </tbody>
-          </table>
-        `;
-
-        document.getElementById('monthlyTablePanel').innerHTML = tableHTML;
-
-      } catch (error) {
-        console.error('Error generating monthly table:', error);
-        document.getElementById('monthlyTablePanel').innerHTML = `
-          <div class="loading">Error generating monthly performance table from data source.</div>
         `;
       }
     }
