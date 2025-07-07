@@ -128,8 +128,9 @@
 
     .correlation-chart-container {
       width: 100% !important;
-      height: 400px !important;
-      margin-top: 10px;
+      height: 300px !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
     }
 
     /* Desktop layout - side by side */
@@ -293,6 +294,10 @@
         height: auto !important;
         margin: 0 auto !important;
       }
+
+      .correlation-chart-container {
+        height: 250px !important;
+      }
       
       .stats-grid {
         grid-template-columns: 1fr !important;
@@ -340,10 +345,6 @@
         -webkit-overflow-scrolling: touch;
         padding: 4px !important;
       }
-
-      .correlation-chart-container {
-        height: 250px !important;
-      }
     }
 
     /* Very small containers (Shopify widgets) */
@@ -366,6 +367,10 @@
         aspect-ratio: 1/1 !important;
         height: auto !important;
         margin: 0 auto !important;
+      }
+
+      .correlation-chart-container {
+        height: 200px !important;
       }
       
       .stats-grid {
@@ -395,10 +400,6 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         padding: 2px !important;
-      }
-
-      .correlation-chart-container {
-        height: 200px !important;
       }
     }
   </style>
@@ -449,8 +450,29 @@
   <script>
     // Helper to extract product handle from the iframe URL query string
     function getProductHandle() {
+      // Try multiple methods to get the handle
       const params = new URLSearchParams(window.location.search);
-      return params.get('handle');
+      let handle = params.get('handle');
+      
+      // If no handle in query params, try to extract from URL path
+      if (!handle) {
+        const path = window.location.pathname;
+        const pathSegments = path.split('/').filter(segment => segment.length > 0);
+        
+        // Look for known product handles in the path
+        for (const segment of pathSegments) {
+          if (handleDataMap[segment]) {
+            handle = segment;
+            break;
+          }
+        }
+      }
+      
+      // For testing purposes, uncomment and set a specific strategy:
+      handle = 'weekly-pullback-strategy';
+      
+      console.log('Detected Product Handle:', handle);
+      return handle;
     }
 
     // Mapping from product handle to their respective data URLs
@@ -515,7 +537,6 @@
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrxt_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrx.json',
       },
-      // Add more products as needed
     };
 
     // Default URLs (current ones)
@@ -547,6 +568,7 @@
 
     async function drawChartAndStats() {
       const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
+      console.log('Starting data fetch with URLs:', { newmrUrl, spyUrl, statsUrl, extendedUrl });
       try {
         const [newmrData, spyData, stats, extended] = await Promise.all([
           fetchJsonOrLog(newmrUrl, 'newmrUrl'),
@@ -554,6 +576,7 @@
           fetchJsonOrLog(statsUrl, 'statsUrl'),
           fetchJsonOrLog(extendedUrl, 'extendedUrl')
         ]);
+        console.log('Data fetched successfully:', { newmrData: newmrData?.length, spyData: spyData?.length, stats, extended });
 
         const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
         const newmrMap = new Map(filterValid(newmrData).map(d => [d.Date, parseFloat(d.Equity)]));
@@ -663,8 +686,18 @@
         `;
 
         const extendedPanel = document.getElementById("extendedPanel");
-        // Show 0 if dividends are 0 or negative
-        const safeDividends = (extended.sum_dividends > 0) ? extended.sum_dividends : 0;
+        
+        // Use dividends exactly as they come from the JSON file
+        // Only show 0 if the value is actually 0 or negative, otherwise show the exact value
+        let displayDividends = "0";
+        if (extended.sum_dividends) {
+          const dividendStr = extended.sum_dividends.toString();
+          const dividendNum = parseFloat(dividendStr.replace(/,/g, ''));
+          if (dividendNum > 0) {
+            displayDividends = dividendStr; // Use original string format with commas
+          }
+        }
+        
         extendedPanel.innerHTML = `
           <div class="stats-grid">
             <div class="stat-item">
@@ -673,7 +706,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">Earned Dividends</div>
-              <div class="stat-value">$${safeDividends}</div>
+              <div class="stat-value">$${displayDividends}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Average Holding Days</div>
@@ -690,14 +723,18 @@
 
       } catch (error) {
         console.error('Error loading data:', error);
+        console.error('Error stack:', error.stack);
         document.getElementById('statsPanel').innerHTML = `
-          <div class="loading">Error loading data. Please try refreshing the page.</div>
+          <div class="loading">Error loading data: ${error.message}. Please try refreshing the page.</div>
         `;
         document.getElementById('extendedPanel').innerHTML = `
-          <div class="loading">Error loading data. Please try refreshing the page.</div>
+          <div class="loading">Error loading data: ${error.message}. Please try refreshing the page.</div>
         `;
         document.getElementById('monthlyTablePanel').innerHTML = `
-          <div class="loading">Error loading monthly data. Please try refreshing the page.</div>
+          <div class="loading">Error loading monthly data: ${error.message}. Please try refreshing the page.</div>
+        `;
+        document.getElementById('correlationPanel').innerHTML = `
+          <div class="loading">Error loading correlation data: ${error.message}. Please try refreshing the page.</div>
         `;
       }
     }
@@ -831,27 +868,37 @@
           
           tableHTML += `<td class="total-column ${totalClass}"><strong>${totalDisplay}</strong></td>`;
           
-          // MaxDD column (always black text)
-          const maxDDValue = monthlyReturns[year].maxDrawdown;
-          let maxDDDisplay = 'n/a';
-          if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
-            maxDDDisplay = `-${maxDDValue.toFixed(2)}%`;
+          // MaxDD column
+          const ddValue = monthlyReturns[year].maxDrawdown;
+          let ddDisplay = 'n/a';
+          
+          if (ddValue !== undefined && ddValue !== null && !isNaN(ddValue)) {
+            ddDisplay = `${ddValue.toFixed(2)}%`;
           }
-          tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>${maxDDDisplay}</strong></td>`;
+          
+          tableHTML += `<td class="maxdd-column">${ddDisplay}</td>`;
           tableHTML += `</tr>`;
         });
 
         // Add AVG row
         tableHTML += `<tr class="avg-row">`;
-        tableHTML += `<td class="year-column"><strong>AVG</strong></td>`;
+        tableHTML += `<td><strong>AVG</strong></td>`;
+        
         months.forEach((month, index) => {
           const avgValue = monthlyAverages[index];
-          const avgDisplay = `${avgValue.toFixed(2)}%`;
-          const avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
+          let avgDisplay = avgValue.toFixed(2) + '%';
+          let avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
           tableHTML += `<td class="${avgClass}"><strong>${avgDisplay}</strong></td>`;
         });
-        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(2)}%</strong></td>`;
-        tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>-${avgMaxDrawdown.toFixed(2)}%</strong></td>`;
+        
+        // AVG Total
+        const avgTotalDisplay = avgAnnualReturn.toFixed(2) + '%';
+        const avgTotalClass = avgAnnualReturn < 0 ? 'gain-negative' : 'gain-positive';
+        tableHTML += `<td class="${avgTotalClass}"><strong>${avgTotalDisplay}</strong></td>`;
+        
+        // AVG MaxDD
+        const avgDDDisplay = avgMaxDrawdown.toFixed(2) + '%';
+        tableHTML += `<td><strong>${avgDDDisplay}</strong></td>`;
         tableHTML += `</tr>`;
 
         tableHTML += `
@@ -864,7 +911,7 @@
       } catch (error) {
         console.error('Error generating monthly table:', error);
         document.getElementById('monthlyTablePanel').innerHTML = `
-          <div class="loading">Error generating monthly performance table from data source.</div>
+          <div class="loading">Error loading monthly data. Please try refreshing the page.</div>
         `;
       }
     }
@@ -1134,7 +1181,6 @@
               };
 
               if (width <= 400) {
-                // Very small screens
                 gridConfig = {
                   top: 50,
                   bottom: 100,
@@ -1157,7 +1203,6 @@
                   }]
                 });
               } else if (width <= 767) {
-                // Mobile screens
                 gridConfig = {
                   top: 55,
                   bottom: 90,
@@ -1180,7 +1225,6 @@
                   }]
                 });
               } else {
-                // Desktop screens
                 correlationChart.setOption({
                   title: {
                     textStyle: { fontSize: 14 }
@@ -1232,17 +1276,25 @@
       }
     }
 
-    drawChartAndStats();
+    // Initialize the dashboard
+    function initDashboard() {
+      console.log('ECharts available:', typeof echarts !== 'undefined');
+      if (typeof echarts === 'undefined') {
+        console.error('ECharts library not loaded!');
+        document.getElementById('statsPanel').innerHTML = '<div class="loading">Chart library not loaded. Please refresh the page.</div>';
+        return;
+      }
+      
+      // Start loading data
+      drawChartAndStats();
+    }
+    
+    // Wait for page to load then initialize
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDashboard);
+    } else {
+      initDashboard();
+    }
   </script>
-  <script>
-  function sendHeightToParent() {
-    const height = document.body.scrollHeight;
-    parent.postMessage({ type: 'setIframeHeight', height: height }, '*');
-  }
-
-  window.addEventListener('load', sendHeightToParent);
-  window.addEventListener('resize', sendHeightToParent);
-</script>
-
 </body>
 </html>
