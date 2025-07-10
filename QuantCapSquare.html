@@ -422,16 +422,64 @@
     // Mapping from product handle to their respective data URLs
     const handleDataMap = {
       'weekly-pullback-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydip.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipx.json',
+      },
+      'low-drawdown-nasdaq-mean-reversion-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmr.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrx.json',
+      },
+      'all-time-high-mean-reversion-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmr.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrx.json',
+      },
+      'etf-rotate-monthly-rebalance-investing-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotation.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotationt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotationx.json',
+      },
+      'mean-reversion-trading-strategy-for-2025': {
         newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json',
         spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json',
       },
-      'low-drawdown-nasdaq-mean-reversion-strategy': {
+      'modern-breakout-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakout.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutx.json',
+      },
+      'nasdaq-100-mean-reversion-strategy': {
         newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json',
         spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
         statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json',
         extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json',
+      },
+      'parabolic-short-selling-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmr.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrx.json',
+      },
+      'short-term-mean-reversion-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmr.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmrt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmr.json',
+      },
+      'spy-mean-reversion': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmr.json',
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json',
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrxt_stats.json',
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrx.json',
       },
       // Add more products as needed
     };
@@ -481,7 +529,7 @@
         
         myChart.setOption({
           title: {
-            text: 'New MR 2025 vs SPY Benchmark',
+            text: 'Strategy Equity Curve',
             left: 'center'
           },
           color: ['#27ae60', '#e74c3c'],
@@ -494,7 +542,7 @@
           },
           legend: {
             top: 30,
-            data: ['New MR 2025', 'SPY Benchmark']
+            data: ['Strategy', 'SPY Buy & Hold']
           },
           xAxis: {
             type: 'category',
@@ -511,21 +559,20 @@
           },
           yAxis: {
             type: 'log',
-            name: 'Equity ($)',
             axisLabel: {
               formatter: val => `$${(val/1000).toFixed(0)}k`
             }
           },
           series: [
             {
-              name: 'New MR 2025',
+              name: 'Strategy',
               type: 'line',
               data: newmrEquity,
               lineStyle: { width: 1.5 },
               symbol: "none"
             },
             {
-              name: 'SPY Benchmark',
+              name: 'SPY Buy & Hold',
               type: 'line',
               data: spyEquity,
               lineStyle: { width: 1.5 },
@@ -578,6 +625,8 @@
         `;
 
         const extendedPanel = document.getElementById("extendedPanel");
+        // Show 0 if dividends are 0 or negative
+        const safeDividends = (extended.sum_dividends > 0) ? extended.sum_dividends : 0;
         extendedPanel.innerHTML = `
           <div class="stats-grid">
             <div class="stat-item">
@@ -586,7 +635,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">Earned Dividends</div>
-              <div class="stat-value">$${extended.sum_dividends}</div>
+              <div class="stat-value">$${safeDividends}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">Average Holding Days</div>
@@ -619,66 +668,48 @@
         const response = await fetch(monthlyUrl);
         const rawData = await response.json();
 
-        // Process data to calculate monthly returns
+        // Group data by year and month, keep all entries
         const monthlyData = {};
         const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity));
-        
-        // Sort data by date
         validData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
-        
-        // Group data by year and month, keeping only the last entry for each month
         validData.forEach(item => {
           const date = new Date(item.Date);
           const year = date.getFullYear();
-          const month = date.getMonth(); // 0-based
-          const equity = parseFloat(item.Equity);
-          
-          if (!monthlyData[year]) {
-            monthlyData[year] = {};
-          }
-          
-          monthlyData[year][month] = equity;
+          const month = date.getMonth();
+          if (!monthlyData[year]) monthlyData[year] = {};
+          if (!monthlyData[year][month]) monthlyData[year][month] = [];
+          monthlyData[year][month].push(parseFloat(item.Equity));
         });
 
-        // Calculate monthly percentage changes and other metrics
+        // Calculate monthly arithmetic returns: (lastEquity - firstEquity) / firstEquity * 100
         const monthlyReturns = {};
         const years = Object.keys(monthlyData).sort();
-        let prevYearLastEquity = null;
-        years.forEach((year, yearIdx) => {
+        years.forEach(year => {
           monthlyReturns[year] = {};
           let yearStartEquity = null;
           let maxDrawdown = 0;
           let peak = 0;
           let lastEquity = null;
           for (let month = 0; month < 12; month++) {
-            if (monthlyData[year][month] !== undefined) {
-              const currentEquity = monthlyData[year][month];
-              if (yearStartEquity === null) {
-                yearStartEquity = currentEquity;
-                peak = currentEquity;
-                // For January, use prevYearLastEquity if available
-                if (month === 0 && prevYearLastEquity !== null) {
-                  const monthlyReturn = ((currentEquity - prevYearLastEquity) / prevYearLastEquity) * 100;
-                  monthlyReturns[year][month] = monthlyReturn;
-                }
-                lastEquity = currentEquity;
-                if (month === 0) continue; // Skip the rest for the first month
+            const equities = monthlyData[year][month];
+            if (equities && equities.length > 0) {
+              const firstEquity = equities[0];
+              const lastEquityMonth = equities[equities.length - 1];
+              if (yearStartEquity === null) yearStartEquity = firstEquity;
+              // Monthly arithmetic return for this month
+              if (firstEquity > 0 && equities.length > 1) {
+                monthlyReturns[year][month] = ((lastEquityMonth - firstEquity) / firstEquity) * 100;
+              } else {
+                monthlyReturns[year][month] = null;
               }
-              // For other months, use lastEquity
-              if (lastEquity !== null) {
-                const monthlyReturn = ((currentEquity - lastEquity) / lastEquity) * 100;
-                monthlyReturns[year][month] = monthlyReturn;
-              }
-              // Update peak and calculate drawdown
-              if (currentEquity > peak) peak = currentEquity;
-              const drawdown = ((peak - currentEquity) / peak) * 100;
+              // For drawdown calculation
+              if (peak < lastEquityMonth) peak = lastEquityMonth;
+              const drawdown = ((peak - lastEquityMonth) / peak) * 100;
               if (drawdown > maxDrawdown) maxDrawdown = drawdown;
-              lastEquity = currentEquity;
+              lastEquity = lastEquityMonth;
             }
           }
-          // Save last equity of December for next year
-          prevYearLastEquity = monthlyData[year][11] !== undefined ? monthlyData[year][11] : lastEquity;
-          // Calculate annual return
+          // Calculate annual return (arithmetic)
           if (yearStartEquity !== null && lastEquity !== null) {
             monthlyReturns[year].annual = ((lastEquity - yearStartEquity) / yearStartEquity) * 100;
           }
@@ -695,7 +726,7 @@
           let sum = 0;
           let count = 0;
           years.forEach(year => {
-            if (monthlyReturns[year][month] !== undefined) {
+            if (monthlyReturns[year][month] !== undefined && monthlyReturns[year][month] !== null) {
               sum += monthlyReturns[year][month];
               count++;
             }
@@ -739,8 +770,8 @@
             let cellClass = '';
             let displayValue = 'n/a';
             
-            if (value !== undefined && !isNaN(value)) {
-              displayValue = `${value.toFixed(1)}%`;
+            if (value !== undefined && value !== null && !isNaN(value)) {
+              displayValue = `${value.toFixed(2)}%`;
               cellClass = value < 0 ? 'gain-negative' : 'gain-positive';
             }
             
@@ -752,22 +783,20 @@
           let totalClass = '';
           let totalDisplay = 'n/a';
           
-          if (totalValue !== undefined && !isNaN(totalValue)) {
-            totalDisplay = `${totalValue.toFixed(1)}%`;
+          if (totalValue !== undefined && totalValue !== null && !isNaN(totalValue)) {
+            totalDisplay = `${totalValue.toFixed(2)}%`;
             totalClass = totalValue < 0 ? 'gain-negative' : 'gain-positive';
           }
           
           tableHTML += `<td class="total-column ${totalClass}"><strong>${totalDisplay}</strong></td>`;
           
-          // MaxDD column
+          // MaxDD column (always black text)
           const maxDDValue = monthlyReturns[year].maxDrawdown;
           let maxDDDisplay = 'n/a';
-          
           if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
-            maxDDDisplay = `-${maxDDValue.toFixed(1)}%`;
+            maxDDDisplay = `-${maxDDValue.toFixed(2)}%`;
           }
-          
-          tableHTML += `<td class="maxdd-column gain-negative">${maxDDDisplay}</td>`;
+          tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>${maxDDDisplay}</strong></td>`;
           tableHTML += `</tr>`;
         });
 
@@ -776,12 +805,12 @@
         tableHTML += `<td class="year-column"><strong>AVG</strong></td>`;
         months.forEach((month, index) => {
           const avgValue = monthlyAverages[index];
-          const avgDisplay = `${avgValue.toFixed(1)}%`;
+          const avgDisplay = `${avgValue.toFixed(2)}%`;
           const avgClass = avgValue < 0 ? 'gain-negative' : 'gain-positive';
           tableHTML += `<td class="${avgClass}"><strong>${avgDisplay}</strong></td>`;
         });
-        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(1)}%</strong></td>`;
-        tableHTML += `<td class="maxdd-column"><strong>-${avgMaxDrawdown.toFixed(1)}%</strong></td>`;
+        tableHTML += `<td class="total-column"><strong>${avgAnnualReturn.toFixed(2)}%</strong></td>`;
+        tableHTML += `<td class="maxdd-column" style="color:#000;"><strong>-${avgMaxDrawdown.toFixed(2)}%</strong></td>`;
         tableHTML += `</tr>`;
 
         tableHTML += `

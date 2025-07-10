@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mean Reversion Strategies vs SPY</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: transparent;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+      overflow-x: hidden;
+      width: 100%;
+      height: auto;
+      box-sizing: border-box;
+    }
+
+    .dashboard-container {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 16px !important;
+      box-sizing: border-box !important;
+    }
+
+    .chart-section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 20px;
+      text-align: center;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .chart-container {
+      width: 100% !important;
+      aspect-ratio: 1/1 !important;
+      height: auto !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 400px;
+      color: #64748b;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .loading::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 2px solid #e2e8f0;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 12px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 400px;
+      color: #dc2626;
+      font-size: 16px;
+      font-weight: 500;
+      text-align: center;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .error-message::before {
+      content: '⚠️';
+      font-size: 24px;
+    }
+
+    /* Responsive design for mobile devices */
+    @media (max-width: 768px) {
+      .dashboard-container {
+        padding: 12px !important;
+      }
+      
+      .chart-section {
+        padding: 16px !important;
+        border-radius: 8px;
+      }
+      
+      .section-title {
+        font-size: 20px !important;
+        margin-bottom: 16px !important;
+      }
+      
+      .chart-container {
+        width: 70% !important;
+        aspect-ratio: 1/1 !important;
+        height: auto !important;
+        margin: 0 auto !important;
+      }
+    }
+
+    /* Extra small devices - optimized for Shopify widgets */
+    @media (max-width: 480px) {
+      .dashboard-container {
+        padding: 8px !important;
+      }
+      
+      .chart-section {
+        padding: 12px !important;
+        border-radius: 6px;
+      }
+      
+      .section-title {
+        font-size: 18px !important;
+        margin-bottom: 12px !important;
+      }
+      
+      .chart-container {
+        width: 80% !important;
+        aspect-ratio: 1/1 !important;
+        height: auto !important;
+        margin: 0 auto !important;
+      }
+    }
+
+    /* Very small containers */
+    @media (max-width: 360px) {
+      .dashboard-container {
+        padding: 6px !important;
+      }
+      
+      .chart-section {
+        padding: 8px !important;
+      }
+      
+      .section-title {
+        font-size: 16px !important;
+        margin-bottom: 10px !important;
+      }
+      
+      .chart-container {
+        width: 90% !important;
+        aspect-ratio: 1/1 !important;
+        height: auto !important;
+        margin: 0 auto !important;
+      }
+    }
+
+    /* Enhanced styling for better visual appeal */
+    .chart-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border-radius: 12px 12px 0 0;
+    }
+
+    .chart-section {
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <div class="chart-section">
+      <div class="chart-container">
+        <div id="equityChart" style="width: 100%; height: 100%;">
+          <div class="loading">Loading equity curves...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+  <script>
+    // Data URLs for the two selected strategies and SPY benchmark
+    const dataUrls = {
+      athmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmr.json',
+      newmr2025Url: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json',
+      spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json'
+    };
+
+    let chart = null;
+
+    // Fetch data from URL
+    async function fetchJsonOrLog(url, label) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+        return await res.json();
+      } catch (e) {
+        console.error(`Error fetching ${label} from ${url}:`, e);
+        throw e;
+      }
+    }
+
+    // Initialize chart
+    function initChart() {
+      const chartDom = document.getElementById('equityChart');
+      if (!chartDom) {
+        console.error('Chart container not found');
+        return;
+      }
+
+      chart = echarts.init(chartDom);
+      
+      // Set loading state
+      chart.showLoading({
+        text: 'Loading data...',
+        color: '#667eea',
+        textColor: '#64748b',
+        maskColor: 'rgba(255, 255, 255, 0.8)'
+      });
+
+      drawChartAndStats();
+    }
+
+    // Main function to load and display data
+    async function drawChartAndStats() {
+      const { athmrUrl, newmr2025Url, spyUrl } = dataUrls;
+      try {
+        const [athmrData, newmr2025Data, spyData] = await Promise.all([
+          fetchJsonOrLog(athmrUrl, 'All Time High MR'),
+          fetchJsonOrLog(newmr2025Url, 'Mean Reversion 2025'),
+          fetchJsonOrLog(spyUrl, 'SPY Benchmark')
+        ]);
+
+        // Filter valid data - use Equity field like in your original code
+        const filterValid = data => data.filter(d => d.Equity && !isNaN(d.Equity));
+        
+        const athmrMap = new Map(filterValid(athmrData).map(d => [d.Date, parseFloat(d.Equity)]));
+        const newmr2025Map = new Map(filterValid(newmr2025Data).map(d => [d.Date, parseFloat(d.Equity)]));
+        const spyMap = new Map(filterValid(spyData).map(d => [d.Date, parseFloat(d.Equity)]));
+        
+        // Get all dates and sort them
+        const allDates = Array.from(new Set([...athmrMap.keys(), ...newmr2025Map.keys(), ...spyMap.keys()])).sort((a, b) => new Date(a) - new Date(b));
+        
+        // Create equity arrays
+        const athmrEquity = allDates.map(date => athmrMap.get(date) ?? null);
+        const newmr2025Equity = allDates.map(date => newmr2025Map.get(date) ?? null);
+        const spyEquity = allDates.map(date => spyMap.get(date) ?? null);
+
+        // Process dates to show years only once
+        const processedDates = allDates.map((date, index) => {
+          if (index === 0) return date;
+          const currentYear = date.slice(0, 4);
+          const prevYear = allDates[index - 1].slice(0, 4);
+          return currentYear !== prevYear ? date : '';
+        });
+
+        if (!chart) return;
+
+        const option = {
+          backgroundColor: 'transparent',
+          title: {
+            text: 'RealTest Strategies',
+            left: 'center',
+            textStyle: {
+              color: '#374151',
+              fontSize: 16,
+              fontWeight: 'bold'
+            }
+          },
+          color: ['#3498db', '#27ae60', '#e74c3c'],
+          tooltip: {
+            trigger: 'axis',
+            formatter: params => {
+              return params.map(p => `${p.seriesName}: $${p.value?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'n/a'}`).join('<br/>') +
+                     `<br/>Date: ${params[0].axisValue}`;
+            }
+          },
+          legend: {
+            top: 30,
+            data: ['All Time High MR', 'Mean Reversion 2025', 'SPY Buy & Hold']
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '8%',
+            top: '20%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            data: allDates,
+            name: 'Year',
+            boundaryGap: false,
+            axisLine: {
+              lineStyle: {
+                color: '#e2e8f0'
+              }
+            },
+            axisLabel: {
+              color: '#64748b',
+              fontSize: 11,
+              formatter: function (value) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                  return value.slice(2, 4);
+                }
+                return value;
+              }
+            },
+            splitLine: {
+              show: true,
+              lineStyle: {
+                color: '#f1f5f9',
+                type: 'dashed'
+              }
+            }
+          },
+          yAxis: {
+            type: 'log',
+            axisLine: {
+              lineStyle: {
+                color: '#e2e8f0'
+              }
+            },
+            axisLabel: {
+              color: '#64748b',
+              fontSize: 11,
+              formatter: function(value) {
+                if (value >= 1000000) {
+                  return '$' + (value / 1000000).toFixed(1) + 'M';
+                } else if (value >= 1000) {
+                  return '$' + (value / 1000).toFixed(0) + 'K';
+                }
+                return '$' + value.toLocaleString();
+              }
+            },
+            splitLine: {
+              lineStyle: {
+                color: '#f1f5f9',
+                type: 'dashed'
+              }
+            }
+          },
+          series: [
+            {
+              name: 'All Time High MR',
+              type: 'line',
+              data: athmrEquity,
+              lineStyle: { 
+                width: 1.5,
+                color: '#3498db'
+              },
+              symbol: 'none'
+            },
+            {
+              name: 'Mean Reversion 2025',
+              type: 'line',
+              data: newmr2025Equity,
+              lineStyle: { 
+                width: 1.5,
+                color: '#27ae60'
+              },
+              symbol: 'none'
+            },
+            {
+              name: 'SPY Buy & Hold',
+              type: 'line',
+              data: spyEquity,
+              lineStyle: { 
+                width: 1.5,
+                color: '#e74c3c'
+              },
+              symbol: 'none'
+            }
+          ],
+          animation: true,
+          animationDuration: 1000,
+          animationEasing: 'cubicOut'
+        };
+
+        chart.hideLoading();
+        chart.setOption(option);
+
+        // Make chart responsive
+        window.addEventListener('resize', function() {
+          if (chart) {
+            chart.resize();
+          }
+        });
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        showError('Failed to load strategy data');
+      }
+    }
+
+    // Show error message
+    function showError(message) {
+      const chartContainer = document.getElementById('equityChart');
+      if (chartContainer) {
+        chartContainer.innerHTML = `<div class="error-message">${message}</div>`;
+      }
+      if (chart) {
+        chart.hideLoading();
+      }
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add small delay to ensure ECharts is fully loaded
+      setTimeout(initChart, 100);
+    });
+
+    // Handle window resize for responsive design
+    window.addEventListener('resize', function() {
+      if (chart) {
+        chart.resize();
+      }
+    });
+
+    // Render the equity curve chart
+    function renderChart(seriesData) {
+      if (!chart) return;
+
+      const option = {
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',
+            label: {
+              backgroundColor: '#6a7985'
+            }
+          },
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          textStyle: {
+            color: '#374151',
+            fontSize: 12
+          },
+          formatter: function(params) {
+            let result = `<div style="font-weight: 600; margin-bottom: 8px;">${params[0].axisValue}</div>`;
+            params.forEach(param => {
+              const value = param.value[1];
+              const formattedValue = typeof value === 'number' ? value.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              }) : value;
+              result += `<div style="margin: 4px 0;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${param.color}; margin-right: 8px;"></span>
+                <span style="font-weight: 500;">${param.seriesName}:</span> 
+                <span style="font-weight: 600; color: #1e293b;">$${formattedValue}</span>
+              </div>`;
+            });
+            return result;
+          }
+        },
+        legend: {
+          data: seriesData.map(s => s.name),
+          top: 10,
+          textStyle: {
+            color: '#374151',
+            fontSize: 12,
+            fontWeight: '500'
+          },
+          itemWidth: 20,
+          itemHeight: 12
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '8%',
+          top: '15%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'time',
+          boundaryGap: false,
+          axisLine: {
+            lineStyle: {
+              color: '#e2e8f0'
+            }
+          },
+          axisLabel: {
+            color: '#64748b',
+            fontSize: 11
+          },
+          splitLine: {
+            show: true,
+            lineStyle: {
+              color: '#f1f5f9',
+              type: 'dashed'
+            }
+          }
+        },
+        yAxis: {
+          type: 'value',
+          axisLine: {
+            lineStyle: {
+              color: '#e2e8f0'
+            }
+          },
+          axisLabel: {
+            color: '#64748b',
+            fontSize: 11,
+            formatter: function(value) {
+              if (value >= 1000000) {
+                return '$' + (value / 1000000).toFixed(1) + 'M';
+              } else if (value >= 1000) {
+                return '$' + (value / 1000).toFixed(0) + 'K';
+              }
+              return '$' + value.toLocaleString();
+            }
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#f1f5f9',
+              type: 'dashed'
+            }
+          }
+        },
+        series: seriesData,
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: 'cubicOut'
+      };
+
+      chart.hideLoading();
+      chart.setOption(option);
+
+      // Handle responsive resize
+      window.addEventListener('resize', () => {
+        if (chart) {
+          chart.resize();
+        }
+      });
+    }
+
+    // Show error message
+    function showError(message) {
+      const chartContainer = document.getElementById('equityChart');
+      if (chartContainer) {
+        chartContainer.innerHTML = `<div class="error-message">${message}</div>`;
+      }
+      if (chart) {
+        chart.hideLoading();
+      }
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add small delay to ensure ECharts is fully loaded
+      setTimeout(initChart, 100);
+    });
+
+    // Handle window resize for responsive design
+    window.addEventListener('resize', function() {
+      if (chart) {
+        chart.resize();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<div style="width: 100%; overflow: hidden; padding: 0; margin: 0;">
+  <iframe
+    id="auto-resize-iframe"
+    src="https://sacapitalmanagement.github.io/CapitalManagementLtd/safe2.0.html?handle={{ product.handle }}"
+    style="width: 100%; border: none; display: block; overflow: hidden;"
+    scrolling="no"
+  ></iframe>
+</div>
+
+<script>
+  window.addEventListener("message", function (event) {
+    if (event.data && event.data.type === "setIframeHeight") {
+      const iframe = document.getElementById("auto-resize-iframe");
+      if (iframe) {
+        iframe.style.height = event.data.height + "px";
+      }
+    }
+  });
+</script>
