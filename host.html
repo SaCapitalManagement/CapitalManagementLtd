@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RealTest Strategy Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <style>
+    /* Containerized, Shopify-embed-friendly CSS */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 36px;
+      align-items: flex-start;
+      margin-top: 32px;
+      width: 100% !important;
+      max-width: none !important;
+      box-sizing: border-box !important;
+    }
+    .alloc-section, .right-stack, .chart-section, .stats-section, .buy-section {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px 0 rgba(60,72,88,0.06);
+      padding: 24px 18px 18px 18px;
+      border: 1px solid #e6eaf1;
+      width: 100% !important;
+      max-width: none !important;
+      box-sizing: border-box !important;
+    }
+    .right-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      min-width: 0;
+    }
+    .chart-section {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 18px;
+      box-sizing: border-box !important;
+      border-radius: 8px;
+    }
+    .stats-section {
+      margin-bottom: 18px;
+      box-sizing: border-box !important;
+      border-radius: 8px;
+    }
+    .buy-section {
+      margin-top: 0;
+      box-sizing: border-box !important;
+      border-radius: 8px;
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      letter-spacing: 0.01em;
+      text-align: center;
+    }
+    table {
+      width: 100% !important;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      background: transparent;
+      box-sizing: border-box !important;
+    }
+    th, td {
+      padding: 8px 6px;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: middle;
+      box-sizing: border-box !important;
+    }
+    th {
+      border-bottom: 1.5px solid #e6eaf1;
+      font-weight: 600;
+      background: #f7f9fb;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    input[type=range] {
+      width: 100% !important;
+      accent-color: #3b82f6;
+      margin: 0;
+      background: transparent;
+      height: 4px;
+      box-sizing: border-box !important;
+    }
+    .weight-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      box-sizing: border-box !important;
+    }
+    .weight-slider {
+      flex: 1;
+      min-width: 0;
+      box-sizing: border-box !important;
+    }
+    .weight-value {
+      font-size: 14px;
+      font-weight: 500;
+      min-width: 60px;
+      text-align: right;
+      box-sizing: border-box !important;
+    }
+    #chart {
+      width: 100% !important;
+      min-width: 0;
+      max-width: 100vw;
+      aspect-ratio: 1/1;
+      margin-top: 0;
+      background: #f7f9fb;
+      border-radius: 12px;
+      border: 1px solid #e6eaf1;
+      box-shadow: 0 1px 6px 0 rgba(60,72,88,0.04);
+      display: block;
+      box-sizing: border-box !important;
+    }
+    label, strong {
+      font-weight: 500;
+    }
+    p {
+      margin: 0 0 8px 0;
+      line-height: 1.5;
+    }
+    .small-text {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    #selectedProducts > div {
+      transition: box-shadow 0.2s;
+    }
+    #selectedLabel {
+      font-size: 1.05rem;
+      margin-bottom: 12px;
+    }
+    #selectedProducts > div:first-child {
+      margin-top: 8px;
+    }
+    #price {
+      font-size: 1.08rem;
+      margin-top: 8px;
+    }
+    #discountMsg {
+      font-size: 0.93rem;
+      margin-bottom: 12px;
+      font-weight: 400;
+      margin-top: -6px;
+      line-height: 1.4;
+    }
+    #congratsMsg {
+      font-size: 1.08rem;
+      margin-bottom: 14px;
+    }
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 22px;
+      font-size: 1.08rem;
+      font-weight: 600;
+      cursor: pointer;
+      /* No margin here, let theme handle spacing */
+    }
+    button svg {
+      vertical-align: middle;
+      display: inline-block;
+    }
+    #selectedProducts button {
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 4px;
+      margin: 0;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 0;
+      margin-bottom: 0;
+      align-items: stretch;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    .stat-card {
+      background: #f7f9fb;
+      border-radius: 8px;
+      border: 1px solid #e6eaf1;
+      padding: 12px 10px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 0;
+      min-height: 60px;
+      box-sizing: border-box !important;
+    }
+    .stat-label {
+      font-size: 0.98rem;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .stat-value {
+      font-size: 1.18rem;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    
+    /* Blur specific stat values - only when user not logged in */
+    .stat-card.blur-stats .stat-value {
+      filter: blur(5px);
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+    .chart-section {
+      min-width: 0;
+      overflow-x: auto;
+    }
+    #chart {
+      width: 100% !important;
+      min-width: 260px;
+      max-width: 100vw;
+      aspect-ratio: 1/1;
+      margin-top: 0;
+      background: #f7f9fb;
+      border-radius: 12px;
+      border: 1px solid #e6eaf1;
+      box-shadow: 0 1px 6px 0 rgba(60,72,88,0.04);
+      display: block;
+    }
+    .alloc-section {
+      overflow-x: auto;
+    }
+    #strategyTable {
+      width: 100% !important;
+      min-width: 0;
+      overflow-x: auto;
+      display: block;
+      box-sizing: border-box !important;
+    }
+    #strategyTable button {
+      min-width: 36px;
+      min-height: 36px;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #strategyTable button svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .alloc-section, .right-stack, .chart-section, .stats-section, .buy-section {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 12px 2vw 10px 2vw;
+        box-sizing: border-box !important;
+      }
+      .chart-section {
+        min-width: 0;
+        padding: 0;
+        margin-bottom: 12px;
+      }
+      #chart {
+        min-width: 0;
+        width: 100% !important;
+        height: 220px;
+        aspect-ratio: unset;
+        margin-top: 0;
+        background: transparent !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      #strategyTable {
+        min-width: 0;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+    }
+    @media (max-width: 600px) {
+      .main-grid {
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .alloc-section, .chart-section, .results-section {
+        padding: 6px 2px 6px 2px;
+        border-radius: 8px;
+      }
+      h2 { font-size: 1.05rem; }
+      th, td { font-size: 12px; }
+      .weight-value { font-size: 12px; }
+      #price, #discountMsg, #congratsMsg { font-size: 0.98rem; }
+      button { font-size: 0.98rem; padding: 8px 12px; }
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .stat-card {
+        padding: 6px 2px 6px 2px;
+        min-height: 36px;
+      }
+      .stat-label { font-size: 0.88rem; }
+      .stat-value { font-size: 0.98rem; }
+      #discountMsg { font-size: 0.89rem; }
+      #chart { min-width: 220px; height: 220px; aspect-ratio: unset; }
+      #strategyTable { min-width: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="my-portfolio-widget">
+    <div class="main-grid">
+      <div class="alloc-section">
+        <h2 style="text-align:center;">Customize Strategy Allocation</h2>
+        <table id="strategyTable">
+          <thead>
+            <tr><th>Strategy</th><th style="width:60%">Weight ($)</th><th></th></tr>
+          </thead>
+          <tbody id="strategyControls"></tbody>
+          <tfoot>
+            <tr><td><strong>Starting Balance</strong></td><td id="totalWeight">$0</td><td></td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="right-stack">
+        <div class="chart-section">
+          <div id="chart"></div>
+          <p id="congratsMsg" class="small-text" style="margin-bottom: 10px; color: #27ae60; font-weight: bold;"></p>
+        </div>
+        <div class="stats-section">
+          <div id="stats" style="margin-top: 20px;"></div>
+          <div id="combinedStats" style="margin-top: 20px;"></div>
+        </div>
+        <div class="buy-section">
+          <div id="selectedLabel" style="margin: 10px 0 0 0; font-weight: bold; display: none;">Selected Strategies</div>
+          <div id="selectedProducts" style="margin-bottom: 16px;"></div>
+          <div id="price" style="margin-bottom: 10px; font-weight:bold;"></div>
+          <p id="discountMsg" class="small-text" style="margin-bottom: 10px; color: #e67e22; font-weight: bold;"></p>
+          <div style="margin-top: 20px;">
+            <button class="button" onclick="buyNow()">Buy Selected Strategy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.customerEmail = "{{ customer.email | escape }}";
+  </script>
+
+  <script>
+    const strategies = [
+      {name: "Weekly Pullback", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydip.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipx.json", price: 690, info: "https://setupalpha.com/products/weekly-pullback-realtest-strategy?variant=55056844226885"},
+      {name: "Low Drawdown NASDAQ MR", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmr.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrx.json", price: 790, info: "https://setupalpha.com/products/low-drawdown-nasdaq-mean-reversion-realtest-strategy?variant=55056870900037"},
+      {name: "ATH MR", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmr.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrx.json", price: 890, info: "https://setupalpha.com/products/all-time-high-mean-reversion-realtest-strategy?variant=55056858480965"},
+      {name: "ETF Rotation", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotation.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotationx.json", price: 590, info: "https://setupalpha.com/products/etf-rotation-monthly-rebalance-realtest-strategy?variant=55056742252869"},
+      {name: "New MR 2025", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json", price: 890, info: "https://setupalpha.com/products/mean-reversion-2025-realtest-strategy?variant=55056749723973"},
+      {name: "Breakout", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakout.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutx.json", price: 690, info: "https://setupalpha.com/products/modern-breakout-realtest-strategy?variant=55056720167237"},
+      {name: "NASDAQ 100 MR", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json", price: 790, info: "https://setupalpha.com/products/nasdaq-100-mean-reversion-realtest-strategy?variant=55056713417029"},
+      {name: "Parabolic Short Qullamaggie", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmr.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrx.json", price: 890, info: "https://setupalpha.com/products/parabolic-short-realtest-qullamaggie-strategy?variant=55056856547653"},
+      {name: "Short Term MR", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmr.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmrx.json", price: 790, info: "https://setupalpha.com/products/short-term-mean-reversion-realtest-connors-alvarez?variant=55056869228869"},
+      {name: "SPX MR", url: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmr.json", extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrx.json", price: 690, info: "https://setupalpha.com/products/spx-mean-reversion-realtest-strategy?variant=55056622223685"}
+    ];
+
+    const SPY_BENCHMARK = {
+      name: 'SPY Buy & Hold (Benchmark)',
+      url: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json'
+    };
+    let strategyData = [], chartInstance;
+    let strategyExtended = [];
+    let spyData = new Map();
+
+    // Helpers for robust number parsing and formatting (copied from ShopifyEmbed.html)
+    function parseNumber(str) {
+      if (!str) return 0;
+      return Number(str.toString().replace(/,/g, '')) || 0;
+    }
+    function formatNumber(num) {
+      return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    let downsampleCache = null;
+    function getDownsampledData() {
+      if (downsampleCache) return downsampleCache;
+      const weights = strategies.map((_, i) => parseInt(document.getElementById(`weight${i}`).value) / 100000);
+      
+      // Always show chart (even with no strategies selected) to show SPY benchmark
+      if (!chartInstance) {
+        chartInstance = echarts.init(document.getElementById('chart'), null, {
+          renderer: 'canvas',
+          useDirtyRect: true // Better performance
+        });
+      }
+
+      // Use cached dates if available, otherwise calculate
+      if (!window.cachedDates) {
+        const allDates = new Set();
+        strategyData.forEach(m => m && m.forEach((_, d) => allDates.add(d)));
+        window.cachedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+      }
+      const dates = window.cachedDates;
+
+      // Only calculate lines for strategies with non-zero weights
+      const activeStrategies = weights.map((w, i) => ({ weight: w, index: i })).filter(s => s.weight > 0);
+      
+      const lines = activeStrategies.map(strategy => {
+        const i = strategy.index;
+        let last = null, seen = false;
+        return dates.map(d => {
+          const v = strategyData[i]?.get(d);
+          if (v != null) { last = v; seen = true; return v; }
+          return seen ? last : null;
+        });
+      });
+
+      const combined = dates.map((_, idx) => {
+        let sum = 0, valid = false;
+        lines.forEach((line, j) => {
+          if (line[idx] != null) {
+            sum += line[idx] * activeStrategies[j].weight;
+            valid = true;
+          }
+        });
+        return valid ? sum : null;
+      });
+
+      // Truncate all data to start from 2000-01-05 and downsample for performance
+      const startDateIdx = dates.findIndex(d => d >= '2000-01-05');
+      const truncatedDates = startDateIdx === -1 ? [] : dates.slice(startDateIdx);
+      const truncatedCombined = startDateIdx === -1 ? [] : combined.slice(startDateIdx);
+      const truncatedLines = lines.map(line => startDateIdx === -1 ? [] : line.slice(startDateIdx));
+      let lastSpy = null, seenSpy = false;
+      const truncatedSpyLine = startDateIdx === -1 ? [] : truncatedDates.map(d => {
+        const v = spyData.get(d);
+        if (v != null) { lastSpy = v; seenSpy = true; return v; }
+        return seenSpy ? lastSpy : null;
+      });
+      
+      // Downsample data for better performance (take every 5th point)
+      const downsampleFactor = 5;
+      const downsampledDates = [];
+      const downsampledCombined = [];
+      const downsampledLines = truncatedLines.map(line => []);
+      const downsampledSpy = [];
+      
+      for (let i = 0; i < truncatedDates.length; i += downsampleFactor) {
+        downsampledDates.push(truncatedDates[i]);
+        downsampledCombined.push(truncatedCombined[i]);
+        downsampledSpy.push(truncatedSpyLine[i]);
+        truncatedLines.forEach((line, j) => {
+          downsampledLines[j].push(line[i]);
+        });
+      }
+
+      // Precompute indices where the year changes for x-axis labeling
+      const yearLabelIndices = [];
+      let lastYear = null;
+      truncatedDates.forEach((d, idx) => {
+        const year = d.slice(0, 4);
+        if (year !== lastYear) {
+          yearLabelIndices.push(idx);
+          lastYear = year;
+        }
+      });
+
+      // Use downsampled data for plotting (much faster)
+      const series = [];
+      const legend = [];
+      
+      // Add selected strategies
+      activeStrategies.forEach((strategy, j) => {
+        const i = strategy.index;
+        series.push({ 
+          name: strategies[i].name, 
+          type: 'line', 
+          data: downsampledLines[j], 
+          symbol: 'none',
+          lineStyle: { width: 1 },
+          animation: false // Disable animation for better performance
+        });
+        legend.push(strategies[i].name);
+      });
+      
+      // Always add SPY benchmark (even when no strategies selected)
+      series.push({
+        name: SPY_BENCHMARK.name,
+        type: 'line',
+        data: downsampledSpy,
+        lineStyle: { width: 1.5, color: '#e41a1c' },
+        symbol: 'none',
+        z: 0,
+        itemStyle: { color: '#e41a1c' },
+        animation: false
+      });
+      legend.push(SPY_BENCHMARK.name);
+      
+      // Add combined equity fill and line (only if strategies are selected)
+      if (activeStrategies.length > 0) {
+        series.push({
+          name: 'Combined Equity Fill',
+          type: 'line',
+          data: downsampledCombined,
+          lineStyle: { width: 0 },
+          symbol: 'none',
+          areaStyle: { color: 'rgba(128,128,128,0.5)', origin: 'start' },
+          z: 1,
+          tooltip: { show: false },
+          animation: false
+        });
+        series.push({
+          name: 'Combined Equity',
+          type: 'line',
+          data: downsampledCombined,
+          lineStyle: { width: 1.5, color: '#888' },
+          symbol: 'none',
+          z: 2,
+          itemStyle: { color: '#888' },
+          animation: false
+        });
+        legend.push('Combined Equity');
+      }
+      // Use downsampledDates for xAxis
+      const option = {
+        tooltip: { trigger: 'axis' },
+        legend: {
+          data: legend,
+          textStyle: { fontWeight: 'bold' },
+          icon: 'roundRect',
+          itemWidth: 18,
+          itemHeight: 18,
+          borderRadius: 4,
+          itemGap: 24,
+          backgroundColor: 'transparent',
+          borderWidth: 0,
+          padding: [12, 16, 8, 16], // top, right, bottom, left
+          left: 'center',
+        },
+        xAxis: {
+          type: 'category',
+          data: downsampledDates,
+          name: '', // Remove the axis name
+          axisLabel: {
+            interval: function(index, value) {
+              // Show only at first occurrence of each year
+              if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                if (index === 0 || value.slice(0, 4) !== downsampledDates[index - 1]?.slice(0, 4)) {
+                  return true;
+                }
+                return false;
+              }
+              return false;
+            },
+            formatter: function (value, idx) {
+              // Show only the first occurrence of each year as '00', '01', etc.
+              if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                if (idx === 0 || value.slice(0, 4) !== downsampledDates[idx - 1]?.slice(0, 4)) {
+                  return value.slice(2, 4);
+                }
+                return '';
+              }
+              return '';
+            },
+            hideOverlap: true
+          }
+        },
+        yAxis: {
+          type: 'log',
+          name: '', // Remove the 'Equity' label
+          min: 10000,
+          axisLabel: {
+            formatter: function(val) {
+              if (val >= 1e6) return `$${(val/1e6).toFixed(0)}M`;
+              if (val >= 1e3) return `$${(val/1e3).toFixed(0)}k`;
+              return `$${val}`;
+            }
+          }
+        },
+        grid: {left: 90, right: 30, top: 80, bottom: 50, containLabel: true},
+        series: series
+      };
+      // Set chart aspect ratio to 1:1
+      const chartDom = document.getElementById('chart');
+      chartDom.style.aspectRatio = '1/1';
+      chartDom.style.width = '100%';
+      chartDom.style.height = 'auto';
+
+      if (!chartInstance) {
+        chartInstance = echarts.init(document.getElementById('chart'), null, {
+          renderer: 'canvas',
+          useDirtyRect: true // Better performance
+        });
+      } else {
+        chartInstance.clear();
+      }
+      
+      // Set option with performance optimizations
+      chartInstance.setOption(option, {
+        notMerge: true,
+        lazyUpdate: true
+      });
+
+      // Stats: always calculate from combined equity (never SPY or any other line)
+      const BPY = 252; // bars per year (daily)
+      const RiskFreeRate = 0; // set to 0 unless you want to specify
+      const epsilon = 1e-10;
+      
+      // Use the original truncated data for calculations (not downsampled)
+      const validCombined = truncatedCombined.filter(v => v != null);
+      const netPct = [];
+      for (let i = 1; i < validCombined.length; ++i) {
+        const prev = validCombined[i - 1];
+        const curr = validCombined[i];
+        if (prev > 0 && curr > 0) {
+          netPct.push((curr - prev) / prev);
+        }
+      }
+      const rfPerPeriod = RiskFreeRate / BPY;
+      const excess = netPct.map(r => r - rfPerPeriod);
+      const avg = excess.reduce((a, b) => a + b, 0) / (excess.length || 1);
+      const std = Math.sqrt(excess.reduce((s, r) => s + (r - avg) ** 2, 0) / (excess.length || 1));
+      const sharpe = (std > epsilon && excess.length > 1) ? (Math.sqrt(BPY) * avg / std) : null;
+      // Debug info
+      console.log('Combined equity:', validCombined);
+      console.log('NetPct:', netPct);
+      console.log('Excess:', excess);
+      console.log('Avg:', avg, 'Std:', std, 'Sharpe:', sharpe);
+      let peak = -Infinity, maxDD = 0;
+      validCombined.forEach(val => { peak = Math.max(peak, val); maxDD = Math.min(maxDD, (val - peak) / peak); });
+      // Calculate CAGR for MAR ratio
+      let cagr = 0;
+      if (validCombined.length > 1) {
+        const start = validCombined[0];
+        const end = validCombined[validCombined.length - 1];
+        // Use the actual date range for the validCombined segment
+        const startDate = truncatedDates[0];
+        const endDate = truncatedDates[truncatedDates.length - 1];
+        const years = (endDate && startDate) ? ((new Date(endDate) - new Date(startDate)) / (365.25 * 24 * 3600 * 1000)) : 0;
+        if (start > 0 && years > 0) {
+          cagr = Math.pow(end / start, 1 / years) - 1;
+        }
+      }
+      const mar = (cagr && maxDD) ? (cagr / Math.abs(maxDD)) : 0;
+      // ROR calculation (Compounded Annual Return)
+      const startEquity = validCombined[0];
+      const endEquity = validCombined[validCombined.length - 1];
+      const startDate = truncatedDates[0];
+      const endDate = truncatedDates[truncatedDates.length - 1];
+      const _years = (endDate && startDate) ? ((new Date(endDate) - new Date(startDate)) / (365.25 * 24 * 3600 * 1000)) : 0;
+      const _CAR = (startEquity > 0 && _years > 0) ? (Math.pow(endEquity / startEquity, 1 / _years) - 1) : null;
+      // For now, assume no cash flows, so _AAR is not used
+      const ROR = _CAR;
+
+      // Add to stats display
+      document.getElementById('stats').innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Sharpe Ratio</div><div class="stat-value">${sharpe !== null ? sharpe.toFixed(2) : 'N/A'}</div></div>
+          <div class="stat-card"><div class="stat-label">ROR</div><div class="stat-value">${ROR !== null ? (ROR * 100).toFixed(2) : 'N/A'}%</div></div>
+          <div class="stat-card {% unless customer.email %}blur-stats{% endunless %}"><div class="stat-label">Max Drawdown</div><div class="stat-value">${isFinite(maxDD) ? (maxDD * 100).toFixed(2) : '0.00'}%</div></div>
+          <div class="stat-card {% unless customer.email %}blur-stats{% endunless %}"><div class="stat-label">MAR Ratio</div><div class="stat-value">${isFinite(mar) ? mar.toFixed(2) : '0.00'}</div></div>
+          <div class="stat-card {% unless customer.email %}blur-stats{% endunless %}"><div class="stat-label">Earned Dividends</div><div class="stat-value" id="dividendsStat">...</div></div>
+        </div>
+        {% unless customer.email %}<p style="text-align: center; margin-top: 12px; font-size: 0.9rem; color: #666; font-style: italic;">Free login to see full statistics (MaxDD, MAR etc) - <span style="text-decoration: underline; cursor: pointer;" onclick="redirectToLogin()">Sign in</span></p>{% endunless %}
+      `;
+      const price = weights.reduce((sum, w, i) => sum + (w > 0 ? strategies[i].price : 0), 0);
+      renderDiscountMsg(price);
+      renderTotalPrice(price);
+      // Add combined stats below chart
+      renderCombinedStats();
+
+      downsampleCache = { downsampledDates, downsampledCombined, downsampledLines, downsampledSpy };
+      return downsampleCache;
+    }
+
+    function renderCombinedStats() {
+      // Calculate combined dividends as weighted sum of sum_dividends from each strategy
+      const weights = strategies.map((_, i) => parseInt(document.getElementById(`weight${i}`).value) / 100000);
+      let totalDividends = 0;
+      let totalCommissions = 0;
+      strategyExtended.forEach((ext, i) => {
+        if (!ext) return;
+        let div = parseNumber(ext.sum_dividends);
+        const comm = parseNumber(ext.sum_commission);
+        // If dividends are 0 or below, treat as 0
+        if (isNaN(div) || div <= 0) div = 0;
+        if (!isNaN(div) && weights[i] > 0) totalDividends += div * weights[i];
+        if (!isNaN(comm) && weights[i] > 0) totalCommissions += comm * weights[i];
+      });
+      // Update the dividends stat in the stats grid
+      const divStat = document.getElementById('dividendsStat');
+      if (divStat) divStat.textContent = `$${formatNumber(totalDividends)}`;
+      document.getElementById('combinedStats').innerHTML = '';
+    }
+
+    // Show selected products (weight > 0) above the buy button
+    function renderSelectedProducts() {
+      const container = document.getElementById('selectedProducts');
+      const label = document.getElementById('selectedLabel');
+      let html = '';
+      let any = false;
+      strategies.forEach((s, i) => {
+        const w = parseInt(document.getElementById(`weight${i}`).value);
+        if (w > 0) {
+          any = true;
+          html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer;transition:box-shadow 0.2s;" onclick=\"window.open('${s.info}','_blank')\" title='Open strategy info in new tab'>
+            <span style='font-weight:600;'>${s.name}</span>
+            <span style='color:#64748b;'>$${s.price}</span>
+          </div>`;
+        }
+      });
+      if (!any) {
+        html = `<p style='color:#888;text-align:center;margin:0;'>No strategies selected.</p>`;
+        label.style.display = 'none';
+      } else {
+        label.style.display = '';
+      }
+      container.innerHTML = html;
+    }
+
+    function renderDiscountMsg(originalPrice) {
+      const discountMsg = document.getElementById('discountMsg');
+      const selectedCount = strategies.reduce((sum, _, i) => sum + (parseInt(document.getElementById(`weight${i}`).value) > 0 ? 1 : 0), 0);
+      let msg = '';
+      let discount = 0;
+      let nextTier = 0;
+      if (selectedCount === 1) {
+        msg = 'Add 3 more to unlock 20% off.';
+      } else if (selectedCount === 2) {
+        msg = 'Add 2 more to unlock 20% off.';
+      } else if (selectedCount === 3) {
+        msg = 'Add 1 more to unlock 20% off.';
+      } else if (selectedCount === 4) {
+        discount = 0.20;
+        const save = Math.round(originalPrice * discount);
+        msg = `🎯 20% Off active - You Save $${save}. Add 2 more to unlock 30% off.`;
+      } else if (selectedCount === 5) {
+        discount = 0.20;
+        const save = Math.round(originalPrice * discount);
+        msg = `20% Off applied. Add 1 more to unlock 30% off.`;
+      } else if (selectedCount === 6) {
+        discount = 0.30;
+        const save = Math.round(originalPrice * discount);
+        msg = `🔥 30% OFF active - You Save $${save}. This is your best price.`;
+      } else if (selectedCount >= 7) {
+        discount = 0.30;
+        const save = Math.round(originalPrice * discount);
+        msg = `🧠 You Saved $${save} with 30% Off. Add more to expand diversification.`;
+      }
+      discountMsg.innerText = msg;
+    }
+
+    function renderTotalPrice(originalPrice) {
+      const priceDiv = document.getElementById('price');
+      const selectedCount = strategies.reduce((sum, _, i) => sum + (parseInt(document.getElementById(`weight${i}`).value) > 0 ? 1 : 0), 0);
+      let discount = 0;
+      if (selectedCount >= 4 && selectedCount <= 5) discount = 0.20;
+      else if (selectedCount >= 6) discount = 0.30;
+      
+      if (discount > 0) {
+        const discountedPrice = Math.round(originalPrice * (1 - discount));
+        priceDiv.innerHTML = `Total Strategy Price: <span style='text-decoration:line-through;color:#888;'>$${originalPrice}</span> <span style='color:#27ae60;font-weight:bold;'>$${discountedPrice}</span>`;
+      } else {
+        priceDiv.innerHTML = `Total Strategy Price: $${originalPrice}`;
+      }
+    }
+
+    function buyNow() {
+      const selectedStrategies = [];
+      const weights = [];
+      strategies.forEach((s, i) => {
+        const w = parseInt(document.getElementById(`weight${i}`).value);
+        if (w > 0) {
+          selectedStrategies.push(s.name);
+          weights.push(w);
+        }
+      });
+
+      if (selectedStrategies.length === 0) {
+        alert('Please select at least one strategy.');
+        return;
+      }
+
+      // Send to Make.com webhook
+      const payload = {
+        email: window.customerEmail || "unknown",
+        strategies: selectedStrategies,
+        weights: weights,
+        timestamp: new Date().toISOString()
+      };
+      fetch('https://hook.eu2.make.com/vtiu18tyb2sinr3lnu7mu4eunfsop11i', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // Continue with your existing add to cart logic...
+      addMultipleToCart(selectedStrategies.map((name, idx) => ({
+        name,
+        variantId: extractVariantId(strategies.find(s => s.name === name).info)
+      })));
+    }
+
+    function addMultipleToCart(strategies) {
+      // Create items array for Shopify cart API
+      const items = strategies.map(strategy => ({
+        id: strategy.variantId,
+        quantity: 1
+      })).filter(item => item.id);
+      
+      // Add all items to cart in one request
+      fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items: items })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Added to cart:', data);
+        // Redirect to cart after all items are added
+        window.location.href = '/cart';
+      })
+      .catch(error => {
+        console.error('Error adding to cart:', error);
+        // Fallback: redirect to cart anyway
+        window.location.href = '/cart';
+      });
+    }
+
+    function extractVariantId(url) {
+      // Extract variant ID from URL like: https://setupalpha.com/products/product?variant=55056844226885
+      const match = url.match(/[?&]variant=(\d+)/);
+      return match ? match[1] : null;
+    }
+
+    function addToCart(variantId, callback) {
+      const formData = new FormData();
+      formData.append('id', variantId);
+      formData.append('quantity', '1');
+      
+      fetch('/cart/add.js', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Added to cart:', data);
+        if (callback) callback();
+      })
+      .catch(error => {
+        console.error('Error adding to cart:', error);
+        if (callback) callback();
+      });
+    }
+
+    function redirectToLogin() {
+      // Store current page URL to return after login
+      const currentUrl = window.location.href;
+      localStorage.setItem('returnAfterLogin', currentUrl);
+      
+      // Redirect to customer account login with specific return URL
+      const returnUrl = 'https://setupalpha.com/404';
+      window.location.href = 'https://account.setupalpha.com/login?return_url=' + encodeURIComponent(returnUrl);
+    }
+
+    function redirectToSignup() {
+      // Store current page URL to return after signup
+      const currentUrl = window.location.href;
+      localStorage.setItem('returnAfterLogin', currentUrl);
+      
+      // Redirect to Shopify register page with specific return URL
+      const returnUrl = 'https://setupalpha.com/404';
+      window.location.href = '/account/register?return_url=' + encodeURIComponent(returnUrl);
+    }
+
+    let chartUpdateTimeout = null;
+    let pendingSliderUpdate = false;
+
+    function onAnySliderInput() {
+      pendingSliderUpdate = true;
+      if (chartUpdateTimeout) return;
+      chartUpdateTimeout = setTimeout(() => {
+        if (pendingSliderUpdate) {
+          updateTotalWeight();
+          renderSelectedProducts();
+          renderChart();
+          updateWeightValues(); // <-- Add this line
+          pendingSliderUpdate = false;
+        }
+        chartUpdateTimeout = null;
+      }, 120); // 120ms debounce for all sliders
+    }
+
+    function updateWeightValues() {
+      strategies.forEach((_, i) => {
+        const slider = document.getElementById(`weight${i}`);
+        const valueSpan = document.getElementById(`value${i}`);
+        if (slider && valueSpan) {
+          valueSpan.textContent = `$${parseInt(slider.value).toLocaleString()}`;
+        }
+      });
+    }
+
+    window.onload = () => {
+      const tbody = document.getElementById('strategyControls');
+      strategies.forEach((s, i) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${s.name}</td>
+  <td>
+    <div class="weight-control">
+      <input type="range" id="weight${i}" class="weight-slider" min="0" max="100000" value="0" step="1000">
+    </div>
+  </td>
+  <td>
+    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+      <span id="value${i}" class="weight-value">$0</span>
+      <button onclick="window.open('${s.info}', '_blank')" 
+        style="background:none;border:none;cursor:pointer;padding:0;margin-left:8px;display:flex;align-items:center;"
+        title="Open strategy page in new tab">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" 
+          viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2" 
+          stroke-linecap="round" stroke-linejoin="round" style="display:block;">
+          <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </button>
+    </div>
+  </td>`;
+        tbody.appendChild(row);
+      });
+
+      // Add debouncing to prevent excessive chart rendering
+      strategies.forEach((_, i) => {
+        document.getElementById(`weight${i}`).addEventListener('input', onAnySliderInput);
+      });
+
+      // Fetch all strategy equity data and SPY benchmark
+      Promise.all([
+        ...strategies.map(s => fetch(s.url).then(res => res.json()).catch(() => [])),
+        fetch(SPY_BENCHMARK.url).then(res => res.json()).catch(() => [])
+      ])
+        .then(jsons => {
+          const spyJson = jsons.pop();
+          jsons.forEach((data, i) => {
+            const map = new Map();
+            data.forEach(row => {
+              const d = row['Date'];
+              const eq = parseFloat(row['Equity']);
+              if (d && !isNaN(eq)) map.set(d, eq);
+            });
+            strategyData[i] = map;
+          });
+          // Parse SPY data
+          spyData = new Map();
+          spyJson.forEach(row => {
+            const d = row['Date'];
+            const eq = parseFloat(row['Equity']);
+            if (d && !isNaN(eq)) spyData.set(d, eq);
+          });
+          // Fetch extended stats for all strategies
+          return Promise.all(strategies.map(s => fetch(s.extendedUrl).then(res => res.json()).catch(() => ({}))));
+        })
+        .then(extendeds => {
+          strategyExtended = extendeds;
+          renderChart();
+        });
+
+      updateTotalWeight();
+      renderSelectedProducts();
+      updateWeightValues(); // <-- Add this line
+    };
+
+    function updateTotalWeight() {
+      const total = strategies.reduce((sum, _, i) => sum + parseInt(document.getElementById(`weight${i}`).value), 0);
+      document.getElementById('totalWeight').innerText = `$${formatNumber(total)}`;
+    }
+
+    function renderChart() {
+      window.requestAnimationFrame(() => {
+        const weights = strategies.map((_, i) => parseInt(document.getElementById(`weight${i}`).value) / 100000);
+        
+        // Always show chart (even with no strategies selected) to show SPY benchmark
+        if (!chartInstance) {
+          chartInstance = echarts.init(document.getElementById('chart'), null, {
+            renderer: 'canvas',
+            useDirtyRect: true // Better performance
+          });
+        }
+
+        // Use cached dates if available, otherwise calculate
+        if (!window.cachedDates) {
+          const allDates = new Set();
+          strategyData.forEach(m => m && m.forEach((_, d) => allDates.add(d)));
+          window.cachedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+        }
+        const dates = window.cachedDates;
+
+        // Only calculate lines for strategies with non-zero weights
+        const activeStrategies = weights.map((w, i) => ({ weight: w, index: i })).filter(s => s.weight > 0);
+        
+        const lines = activeStrategies.map(strategy => {
+          const i = strategy.index;
+          let last = null, seen = false;
+          return dates.map(d => {
+            const v = strategyData[i]?.get(d);
+            if (v != null) { last = v; seen = true; return v; }
+            return seen ? last : null;
+          });
+        });
+
+        const combined = dates.map((_, idx) => {
+          let sum = 0, valid = false;
+          lines.forEach((line, j) => {
+            if (line[idx] != null) {
+              sum += line[idx] * activeStrategies[j].weight;
+              valid = true;
+            }
+          });
+          return valid ? sum : null;
+        });
+
+        // Truncate all data to start from 2000-01-05 and downsample for performance
+        const startDateIdx = dates.findIndex(d => d >= '2000-01-05');
+        const truncatedDates = startDateIdx === -1 ? [] : dates.slice(startDateIdx);
+        const truncatedCombined = startDateIdx === -1 ? [] : combined.slice(startDateIdx);
+        const truncatedLines = lines.map(line => startDateIdx === -1 ? [] : line.slice(startDateIdx));
+        let lastSpy = null, seenSpy = false;
+        const truncatedSpyLine = startDateIdx === -1 ? [] : truncatedDates.map(d => {
+          const v = spyData.get(d);
+          if (v != null) { lastSpy = v; seenSpy = true; return v; }
+          return seenSpy ? lastSpy : null;
+        });
+        
+        // Downsample data for better performance (take every 5th point)
+        const downsampleFactor = 5;
+        const downsampledDates = [];
+        const downsampledCombined = [];
+        const downsampledLines = truncatedLines.map(line => []);
+        const downsampledSpy = [];
+        
+        for (let i = 0; i < truncatedDates.length; i += downsampleFactor) {
+          downsampledDates.push(truncatedDates[i]);
+          downsampledCombined.push(truncatedCombined[i]);
+          downsampledSpy.push(truncatedSpyLine[i]);
+          truncatedLines.forEach((line, j) => {
+            downsampledLines[j].push(line[i]);
+          });
+        }
+
+        // Precompute indices where the year changes for x-axis labeling
+        const yearLabelIndices = [];
+        let lastYear = null;
+        truncatedDates.forEach((d, idx) => {
+          const year = d.slice(0, 4);
+          if (year !== lastYear) {
+            yearLabelIndices.push(idx);
+            lastYear = year;
+          }
+        });
+
+        // Use downsampled data for plotting (much faster)
+        const series = [];
+        const legend = [];
+        
+        // Add selected strategies
+        activeStrategies.forEach((strategy, j) => {
+          const i = strategy.index;
+          series.push({ 
+            name: strategies[i].name, 
+            type: 'line', 
+            data: downsampledLines[j], 
+            symbol: 'none',
+            lineStyle: { width: 1 },
+            animation: false // Disable animation for better performance
+          });
+          legend.push(strategies[i].name);
+        });
+        
+        // Always add SPY benchmark (even when no strategies selected)
+        series.push({
+          name: SPY_BENCHMARK.name,
+          type: 'line',
+          data: downsampledSpy,
+          lineStyle: { width: 1.5, color: '#e41a1c' },
+          symbol: 'none',
+          z: 0,
+          itemStyle: { color: '#e41a1c' },
+          animation: false
+        });
+        legend.push(SPY_BENCHMARK.name);
+        
+        // Add combined equity fill and line (only if strategies are selected)
+        if (activeStrategies.length > 0) {
+          series.push({
+            name: 'Combined Equity Fill',
+            type: 'line',
+            data: downsampledCombined,
+            lineStyle: { width: 0 },
+            symbol: 'none',
+            areaStyle: { color: 'rgba(128,128,128,0.5)', origin: 'start' },
+            z: 1,
+            tooltip: { show: false },
+            animation: false
+          });
+          series.push({
+            name: 'Combined Equity',
+            type: 'line',
+            data: downsampledCombined,
+            lineStyle: { width: 1.5, color: '#888' },
+            symbol: 'none',
+            z: 2,
+            itemStyle: { color: '#888' },
+            animation: false
+          });
+          legend.push('Combined Equity');
+        }
+        // Use downsampledDates for xAxis
+        const option = {
+          tooltip: { trigger: 'axis' },
+          legend: {
+            data: legend,
+            textStyle: { fontWeight: 'bold' },
+            icon: 'roundRect',
+            itemWidth: 18,
+            itemHeight: 18,
+            borderRadius: 4,
+            itemGap: 24,
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+            padding: [12, 16, 8, 16], // top, right, bottom, left
+            left: 'center',
+          },
+          xAxis: {
+            type: 'category',
+            data: downsampledDates,
+            name: '', // Remove the axis name
+            axisLabel: {
+              interval: function(index, value) {
+                // Show only at first occurrence of each year
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                  if (index === 0 || value.slice(0, 4) !== downsampledDates[index - 1]?.slice(0, 4)) {
+                    return true;
+                  }
+                  return false;
+                }
+                return false;
+              },
+              formatter: function (value, idx) {
+                // Show only the first occurrence of each year as '00', '01', etc.
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                  if (idx === 0 || value.slice(0, 4) !== downsampledDates[idx - 1]?.slice(0, 4)) {
+                    return value.slice(2, 4);
+                  }
+                  return '';
+                }
+                return '';
+              },
+              hideOverlap: true
+            }
+          },
+          yAxis: {
+            type: 'log',
+            name: '', // Remove the 'Equity' label
+            min: 10000,
+            axisLabel: {
+              formatter: function(val) {
+                if (val >= 1e6) return `$${(val/1e6).toFixed(0)}M`;
+                if (val >= 1e3) return `$${(val/1e3).toFixed(0)}k`;
+                return `$${val}`;
+              }
+            }
+          },
+          grid: {left: 90, right: 30, top: 80, bottom: 50, containLabel: true},
+          series: series
+        };
+        // Set chart aspect ratio to 1:1
+        const chartDom = document.getElementById('chart');
+        chartDom.style.aspectRatio = '1/1';
+        chartDom.style.width = '100%';
+        chartDom.style.height = 'auto';
+
+        if (!chartInstance) {
+          chartInstance = echarts.init(document.getElementById('chart'), null, {
+            renderer: 'canvas',
+            useDirtyRect: true // Better performance
+          });
+        }
+        
+        // Set option with performance optimizations
+        chartInstance.setOption(option, {
+          notMerge: true,
+          lazyUpdate: true
+        });
+
+        // Stats: always calculate from combined equity (never SPY or any other line)
+        const BPY = 252; // bars per year (daily)
+        const RiskFreeRate = 0; // set to 0 unless you want to specify
+        const epsilon = 1e-10;
+        
+        // Use the original truncated data for calculations (not downsampled)
+        const validCombined = truncatedCombined.filter(v => v != null);
+        const netPct = [];
+        for (let i = 1; i < validCombined.length; ++i) {
+          const prev = validCombined[i - 1];
+          const curr = validCombined[i];
+          if (prev > 0 && curr > 0) {
+            netPct.push((curr - prev) / prev);
+          }
+        }
+        const rfPerPeriod = RiskFreeRate / BPY;
+        const excess = netPct.map(r => r - rfPerPeriod);
+        const avg = excess.reduce((a, b) => a + b, 0) / (excess.length || 1);
+        const std = Math.sqrt(excess.reduce((s, r) => s + (r - avg) ** 2, 0) / (excess.length || 1));
+        const sharpe = (std > epsilon && excess.length > 1) ? (Math.sqrt(BPY) * avg / std) : null;
+        // Debug info
+        console.log('Combined equity:', validCombined);
+        console.log('NetPct:', netPct);
+        console.log('Excess:', excess);
+        console.log('Avg:', avg, 'Std:', std, 'Sharpe:', sharpe);
+        let peak = -Infinity, maxDD = 0;
+        validCombined.forEach(val => { peak = Math.max(peak, val); maxDD = Math.min(maxDD, (val - peak) / peak); });
+        // Calculate CAGR for MAR ratio
+        let cagr = 0;
+        if (validCombined.length > 1) {
+          const start = validCombined[0];
+          const end = validCombined[validCombined.length - 1];
+          // Use the actual date range for the validCombined segment
+          const startDate = truncatedDates[0];
+          const endDate = truncatedDates[truncatedDates.length - 1];
+          const years = (endDate && startDate) ? ((new Date(endDate) - new Date(startDate)) / (365.25 * 24 * 3600 * 1000)) : 0;
+          if (start > 0 && years > 0) {
+            cagr = Math.pow(end / start, 1 / years) - 1;
+          }
+        }
+        const mar = (cagr && maxDD) ? (cagr / Math.abs(maxDD)) : 0;
+        // ROR calculation (Compounded Annual Return)
+        const startEquity = validCombined[0];
+        const endEquity = validCombined[validCombined.length - 1];
+        const startDate = truncatedDates[0];
+        const endDate = truncatedDates[truncatedDates.length - 1];
+        const _years = (endDate && startDate) ? ((new Date(endDate) - new Date(startDate)) / (365.25 * 24 * 3600 * 1000)) : 0;
+        const _CAR = (startEquity > 0 && _years > 0) ? (Math.pow(endEquity / startEquity, 1 / _years) - 1) : null;
+        // For now, assume no cash flows, so _AAR is not used
+        const ROR = _CAR;
+
+        // Add to stats display
+        document.getElementById('stats').innerHTML = `
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Sharpe Ratio</div><div class="stat-value">${sharpe !== null ? sharpe.toFixed(2) : 'N/A'}</div></div>
+            <div class="stat-card"><div class="stat-label">ROR</div><div class="stat-value">${ROR !== null ? (ROR * 100).toFixed(2) : 'N/A'}%</div></div>
+            <div class="stat-card {% unless customer.email %}blur-stats{% endunless %}"><div class="stat-label">Max Drawdown</div><div class="stat-value">${isFinite(maxDD) ? (maxDD * 100).toFixed(2) : '0.00'}%</div></div>
+            <div class="stat-card {% unless customer.email %}blur-stats{% endunless %}"><div class="stat-label">MAR Ratio</div><div class="stat-value">${isFinite(mar) ? mar.toFixed(2) : '0.00'}</div></div>
+            <div class="stat-card {% unless customer.email %}blur-stats{% endunless %}"><div class="stat-label">Earned Dividends</div><div class="stat-value" id="dividendsStat">...</div></div>
+          </div>
+          {% unless customer.email %}<p style="text-align: center; margin-top: 12px; font-size: 0.9rem; color: #666; font-style: italic;">Free login to see full statistics (MaxDD, MAR etc) - <span style="text-decoration: underline; cursor: pointer;" onclick="redirectToLogin()">Sign in</span></p>{% endunless %}
+        `;
+        const originalPrice = strategies.reduce((sum, s, i) => {
+          const weight = parseInt(document.getElementById(`weight${i}`).value);
+          return sum + (weight > 0 ? s.price : 0);
+        }, 0);
+        renderDiscountMsg(originalPrice);
+        renderTotalPrice(originalPrice);
+        // Add combined stats below chart
+        renderCombinedStats();
+      });
+    }
+
+    function setTextIfChanged(el, value) {
+      if (el.innerText !== value) el.innerText = value;
+    }
+  </script>
+</body>
+</html>
