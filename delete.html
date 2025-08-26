@@ -547,36 +547,53 @@
 
     // Custom demo URL mappings for multiple strategies
     const customDemoMap = {
+      'test': [
+        {
+          name: 'Weekly Pullback',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydip.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipx.json?t=' + Date.now(),
+          color: '#22c55e'
+        },
+        {
+          name: 'Low Drawdown Nasdaq MR',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrx.json?t=' + Date.now(),
+          color: '#3b82f6'
+        },
+        {
+          name: 'All-Time High MR',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrx.json?t=' + Date.now(),
+          color: '#8b5cf6'
+        }
+      ],
       'realtest-strategies-for-aggressive-alpha-hunters': [
         {
-        name:   'mean-reversion-2025-realtest-strategy',
-        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json?t=' + Date.now(),
-        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
-        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json?t=' + Date.now(),
-        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json?t=' + Date.now(),
-
+          name: 'Mean Reversion 2025',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json?t=' + Date.now()
         },
         {
-        name:  'parabolic-short-realtest-qullamaggie-strategy',
-        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmr.json?t=' + Date.now(),
-        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
-        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrt_stats.json?t=' + Date.now(),
-        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrx.json?t=' + Date.now(),
-
+          name: 'Parabolic Short',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrx.json?t=' + Date.now()
         },
         {
-        name:   'modern-breakout-realtest-strategy',
-        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakout.json?t=' + Date.now(),
-        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
-        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutt_stats.json?t=' + Date.now(),
-        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutx.json?t=' + Date.now(),
+          name: 'Modern Breakout',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakout.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutx.json?t=' + Date.now()
         },
         {
-        name:    'nasdaq-100-mean-reversion-realtest-strategy':,
-        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json?t=' + Date.now(),
-        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
-        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json?t=' + Date.now(),
-        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json?t=' + Date.now(),
+          name: 'Nasdaq 100 MR',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json?t=' + Date.now()
         }
       ],
       'test-2': [
@@ -1566,7 +1583,9 @@
       // Update next month dates
       updateNextMonthDates();
       
-      if (customDemoUrl && customDemoMap[customDemoUrl]) {
+      // Allow both query param (?demo=...) and product handle to trigger multi-strategy view
+      const multiKey = (customDemoUrl && customDemoMap[customDemoUrl]) ? customDemoUrl : ((productHandle && customDemoMap[productHandle]) ? productHandle : null);
+      if (multiKey) {
         // Hide original combined view
         const originalMain = document.querySelector('.main-layout');
         const originalMonthly = document.querySelector('.monthly-table-section');
@@ -1575,10 +1594,10 @@
         if (originalMonthly) originalMonthly.style.display = 'none';
         if (originalForecast) originalForecast.style.display = 'none';
 
-        const strategies = customDemoMap[customDemoUrl];
+        const strategies = customDemoMap[multiKey];
         strategies.forEach((s, idx) => {
           const urls = { newmrUrl: s.newmrUrl, spyUrl: defaultUrls.spyUrl, statsUrl: s.statsUrl, extendedUrl: s.extendedUrl };
-          const suffix = `${customDemoUrl}-${idx+1}`;
+          const suffix = `${multiKey}-${idx+1}`;
           createStrategyBlock(suffix, `${s.name} Equity Curve`);
           if (typeof Chart !== 'undefined') {
             loadEquityDataFor(urls, suffix, s.name);
