@@ -692,6 +692,14 @@
         let allDates = [];
         let stats, extended;
 
+        // Helper to process raw data into [{x, y}] pairs
+        const processData = (data) => {
+          return data.filter(d => d.Equity && !isNaN(d.Equity)).map(item => ({
+            x: item.Date,
+            y: parseFloat(item.Equity)
+          }));
+        };
+
         if (isCustomDemo) {
           // Handle custom demo with multiple strategies
           const customStrategies = customDemoMap[customDemoUrl];
@@ -807,14 +815,6 @@
           ];
         }
 
-        // Process the data - format: [{Date: "2000-01-03", Equity: 100178.87}, ...]
-        const processData = (data) => {
-          return data.filter(d => d.Equity && !isNaN(d.Equity)).map(item => ({
-            x: item.Date,
-            y: parseFloat(item.Equity)
-          }));
-        };
-
         // Update statistics panel with dynamic data
         if (stats && extended) {
           updateStatsPanel(stats, extended);
@@ -831,14 +831,6 @@
             }
           }
         }
-
-        const meanReversionProcessed = processData(meanReversionData);
-        const spyProcessed = processData(spyData);
-
-        // Ensure both datasets have the same length and dates
-        const minLength = Math.min(meanReversionProcessed.length, spyProcessed.length);
-        const meanReversionTrimmed = meanReversionProcessed.slice(0, minLength);
-        const spyTrimmed = spyProcessed.slice(0, minLength);
 
         // Create labels for each data point (for hover) and display labels (for x-axis)
         if (allDates.length === 0) return;
@@ -1412,15 +1404,183 @@
       }
     }
 
+    // Create a separate, stacked block for each strategy (chart + stats + monthly table)
+    function createStrategyBlock(idSuffix, titleText) {
+      const container = document.querySelector('.financial-dashboard-container');
+      const wrapper = document.createElement('div');
+      wrapper.style.margin = '16px 0';
+      wrapper.innerHTML = `
+        <div class="main-layout">
+          <div class="chart-section">
+            <h2 class="chart-title">${titleText}</h2>
+            <div class="chart-container">
+              <canvas id="equityChart-${idSuffix}" width="400" height="400"></canvas>
+            </div>
+            <div style="text-align: center; margin-top: 8px; font-size: 11px; color: #6b7280; font-style: italic;">
+              All results shown include trading costs in the calculations.
+            </div>
+          </div>
+          <div class="stats-column">
+            <div id="statsPanel-${idSuffix}">
+              <div class="loading">Loading statistics...</div>
+            </div>
+          </div>
+        </div>
+        <div id="forecastBanner-${idSuffix}" style="display: none; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #16a34a; border-radius: 8px; padding: 16px; margin: 16px 0; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);">
+          <div class="forecast-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="forecast-title" style="font-size: 14px; font-weight: 600; color: #15803d; display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 17L9 11L13 15L21 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Next Month's Forecasted Performance
+              <span id="nextMonthDates-${idSuffix}" style="font-size: 12px; font-weight: 400; opacity: 0.8; margin-left: 8px;"></span>
+            </div>
+            <div class="forecast-pill" style="font-size: 11px; color: #15803d; opacity: 0.7; background: rgba(255, 255, 255, 0.4); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(34, 197, 94, 0.2);">Calculated from historical monthly gains and losses (%)</div>
+          </div>
+          <div class="forecast-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="forecast-card" style="background: rgba(255, 255, 255, 0.6); border-radius: 6px; padding: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+              <div style="font-size: 11px; color: #15803d; margin-bottom: 4px; font-weight: 500;">Based on current portfolio size</div>
+              <div id="forecastAmount-${idSuffix}" class="amount" style="font-size: 20px; font-weight: 700; color: #166534; margin-bottom: 2px;">$0</div>
+              <div class="subtext" style="font-size: 10px; color: #15803d; opacity: 0.8;">Next month’s expected profit</div>
+            </div>
+            <div class="forecast-card" style="background: rgba(255, 255, 255, 0.6); border-radius: 6px; padding: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+              <div style="font-size: 11px; color: #15803d; margin-bottom: 4px; font-weight: 500;">Start today → next month’s profit</div>
+              <div id="forecastAmount100k-${idSuffix}" class="amount" style="font-size: 20px; font-weight: 700; color: #166534; margin-bottom: 2px;">$0</div>
+              <div class="subtext" style="font-size: 10px; color: #15803d; opacity: 0.8;">Forecasted profit, if you were starting fresh today</div>
+            </div>
+          </div>
+          <div class="forecast-disclaimer" style="font-size: 10px; color: #15803d; opacity: 0.8; margin-top: 8px;">
+            Past performance does not guarantee future results. Forecasts are estimates and may differ from actual results.
+          </div>
+        </div>
+        <div class="monthly-table-section">
+          <h3 class="monthly-table-title">Combined Monthly Percent Gains</h3>
+          <div id="monthlyTablePanel-${idSuffix}">
+            <div class="loading">Loading monthly performance data...</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(wrapper);
+    }
+
+    async function loadEquityDataFor(urls, idSuffix, strategyLabel) {
+      try {
+        const ctx = document.getElementById(`equityChart-${idSuffix}`);
+        if (!ctx) return;
+
+        const [meanReversionData, spyData, stats, extended] = await Promise.all([
+          fetchJsonOrLog(urls.newmrUrl, 'newmrUrl'),
+          fetchJsonOrLog(urls.spyUrl, 'spyUrl'),
+          fetchJsonOrLog(urls.statsUrl, 'statsUrl'),
+          fetchJsonOrLog(urls.extendedUrl, 'extendedUrl')
+        ]);
+
+        // Scoped stats panel update
+        (function updateStatsPanelScoped(statsLocal, extendedLocal){
+          const statPanel = document.getElementById(`statsPanel-${idSuffix}`);
+          if (!statPanel) return;
+          function parseNumber(str){ if(!str) return 0; return Number(str.toString().replace(/,/g, ''))||0; }
+          function formatNumber(num){ return num.toLocaleString(undefined,{ maximumFractionDigits:0 }); }
+          const sumCommission = parseNumber(extendedLocal.sum_commission);
+          let sumDividends = parseNumber(extendedLocal.sum_dividends); if (sumDividends <= 0) sumDividends = 0;
+          const avgBars = extendedLocal.avg_bars || 'n/a';
+          const netProfit = parseNumber(statsLocal.NetProfit);
+          const totalReturn = ((netProfit / 100000) * 100).toFixed(1);
+          const formattedTotalReturn = parseFloat(totalReturn).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+          const totalTrades = parseNumber(statsLocal.Trades);
+          const winRate = parseFloat(statsLocal.PctWins);
+          const winningTrades = Math.round((totalTrades * winRate) / 100);
+          let frequencyText = totalTrades < 100 ? 'Low frequency execution' : (totalTrades <= 1000 ? 'Medium frequency execution' : 'High frequency execution');
+          const avgHoldingDays = parseInt(avgBars) || 6;
+          const momentumText = avgHoldingDays < 10 ? 'Short-term momentum' : 'Long-term momentum';
+          statPanel.innerHTML = `
+            <div class="stats-grid">
+              <div class="stat-item"><div class="stat-label">Net Profit</div><div class="stat-value positive">$${statsLocal.NetProfit}</div><div class="stat-sublabel">+${formattedTotalReturn}% total return</div></div>
+              <div class="stat-item"><div class="stat-label">Total Trades</div><div class="stat-value">${statsLocal.Trades}</div><div class="stat-sublabel">${frequencyText}</div></div>
+              <div class="stat-item"><div class="stat-label">Max Drawdown</div><div class="stat-value negative">-${Math.abs(statsLocal.Drawdown)}%</div><div class="stat-sublabel">Controlled risk exposure</div></div>
+              <div class="stat-item"><div class="stat-label">Expectancy</div><div class="stat-value">${statsLocal.Expectancy}</div><div class="stat-sublabel">Average trade profit</div></div>
+              <div class="stat-item"><div class="stat-label">Sharpe Ratio</div><div class="stat-value">${statsLocal.Sharpe}</div><div class="stat-sublabel">Risk-adjusted return</div></div>
+              <div class="stat-item"><div class="stat-label">MAR Ratio</div><div class="stat-value">${statsLocal.MAR}</div></div>
+              <div class="stat-item"><div class="stat-label">Win %</div><div class="stat-value">${statsLocal.PctWins}</div><div class="stat-sublabel">${winningTrades.toLocaleString()} winning trades</div></div>
+              <div class="stat-item"><div class="stat-label">Max Exposure</div><div class="stat-value">${statsLocal.MaxExposure}%</div></div>
+              <div class="stat-item"><div class="stat-label">Paid Commissions</div><div class="stat-value">$${formatNumber(sumCommission)}</div><div class="stat-sublabel">IBKR stock trading fees</div></div>
+              <div class="stat-item"><div class="stat-label">Earned Dividends</div><div class="stat-value">$${formatNumber(sumDividends)}</div><div class="stat-sublabel">Passive income generated</div></div>
+              <div class="stat-item"><div class="stat-label">Avg Holding Days</div><div class="stat-value">${avgBars}</div><div class="stat-sublabel">${momentumText}</div></div>
+            </div>`;
+        })(stats, extended);
+
+        // Chart build
+        const processData = (data) => data.filter(d => d.Equity && !isNaN(d.Equity)).map(item => ({ x: item.Date, y: parseFloat(item.Equity) }));
+        const meanReversionProcessed = processData(meanReversionData);
+        const spyProcessed = processData(spyData);
+        const minLength = Math.min(meanReversionProcessed.length, spyProcessed.length);
+        const meanReversionTrimmed = meanReversionProcessed.slice(0, minLength);
+        const spyTrimmed = spyProcessed.slice(0, minLength);
+        const allDates = meanReversionTrimmed.map(item => item.x);
+        const labels = allDates.map((dateStr, index) => {
+          const date = new Date(dateStr); const year = date.getFullYear(); const shortYear = String(year).slice(-2);
+          if (index === 0) return shortYear; const prevYear = new Date(allDates[index - 1]).getFullYear(); return year !== prevYear ? shortYear : '';
+        });
+        const verticalLinePlugin = { id: 'verticalLine', beforeDraw: (chart) => { if (chart.tooltip?._active && chart.tooltip._active.length) { const activePoint = chart.tooltip._active[0]; const ctx2 = chart.ctx; const x = activePoint.element.x; const topY = chart.scales.y.top; const bottomY = chart.scales.y.bottom; ctx2.save(); ctx2.beginPath(); ctx2.setLineDash([3,3]); ctx2.moveTo(x, topY); ctx2.lineTo(x, bottomY); ctx2.lineWidth = 1; ctx2.strokeStyle = '#9ca3af'; ctx2.stroke(); ctx2.restore(); } } };
+        if (typeof Chart !== 'undefined') {
+          Chart.register(verticalLinePlugin);
+          new Chart(ctx, { type: 'line', data: { labels, datasets: [
+            { label: strategyLabel, data: meanReversionTrimmed.map(i=>i.y), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', borderWidth: 1, fill: false, tension: 0.1, pointRadius: 0, pointHoverRadius: 3 },
+            { label: 'SPY Buy & Hold', data: spyTrimmed.map(i=>i.y), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, fill: true, tension: 0.1, pointRadius: 0, pointHoverRadius: 3 }
+          ] }, options: { responsive: true, maintainAspectRatio: false, devicePixelRatio: 1, plugins: { legend: { position: 'top', labels: { fontSize: 12, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', usePointStyle: true, pointStyle: 'rect', padding: 15 } }, tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#374151', bodyColor: '#374151', borderColor: '#e5e7eb', borderWidth: 1, cornerRadius: 6, displayColors: true, callbacks: { title: function(tooltipItems){ const index = tooltipItems[0].dataIndex; const date = new Date(allDates[index]); return date.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }, label: function(context){ const value = context.parsed.y; const formattedValue = value >= 1000000 ? '$' + (value/1000000).toFixed(1) + 'M' : '$' + (value/1000).toFixed(0) + 'K'; return context.dataset.label + ': ' + formattedValue; } } } }, scales: { x: { display: true, title: { display: false }, ticks: { maxTicksLimit: 26, font: { size: 10 }, autoSkip: false, callback: function(value){ const label = this.getLabelForValue(value); return label !== '' ? label : undefined; } }, grid: { color: '#f3f4f6', drawBorder: false } }, y: { display: true, type: 'logarithmic', title: { display: false }, ticks: { callback: function(value){ if (value >= 1000000) { return '$' + (value/1000000).toFixed(0) + 'M'; } else if (value >= 100000) { return '$' + (value/1000).toFixed(0) + 'K'; } return '$' + value.toLocaleString(); }, font: { size: 10 } }, grid: { color: '#f3f4f6', drawBorder: false } } }, interaction: { mode: 'index', axis: 'x', intersect: false }, elements: { line: { tension: 0.1 } } } });
+        }
+
+        // Forecast + monthly table for this block
+        (function generateMonthlyTableScoped(rawData){
+          const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity)); validData.sort((a,b)=> new Date(a.Date) - new Date(b.Date));
+          const cleanedData = validData.map(d => ({ date: new Date(d.Date), equity: parseFloat(d.Equity.toString().replace(/[$,]/g,'').trim()) }));
+          const dailyReturns = []; for (let i=1;i<cleanedData.length;i++){ const cur=cleanedData[i].equity, prev=cleanedData[i-1].equity; if (prev>0){ dailyReturns.push({ date: cleanedData[i].date, return: (cur-prev)/prev, equity: cur }); } }
+          const monthlyGroups = {}, yearlyGroups = {}; dailyReturns.forEach(d => { const y=d.date.getFullYear(), m=d.date.getMonth(), k=`${y}-${m}`; if(!monthlyGroups[k]) monthlyGroups[k]={ year:y, month:m, dailyReturns:[] }; monthlyGroups[k].dailyReturns.push(d.return); if(!yearlyGroups[y]) yearlyGroups[y]={ dailyReturns:[] }; yearlyGroups[y].dailyReturns.push(d.return); });
+          const monthlyReturns = {}; Object.values(monthlyGroups).forEach(md=>{ if(md.dailyReturns.length>0){ const gf = md.dailyReturns.reduce((p,r)=>p*(1+r),1); const mp = Math.round((gf-1)*1000)/10; if(!monthlyReturns[md.year]) monthlyReturns[md.year]={}; monthlyReturns[md.year][md.month]=mp; } });
+          Object.keys(yearlyGroups).forEach(y=>{ const yr=yearlyGroups[y]; if(yr.dailyReturns.length>0){ const gf = yr.dailyReturns.reduce((p,r)=>p*(1+r),1); const yp = Math.round((gf-1)*1000)/10; if(!monthlyReturns[y]) monthlyReturns[y]={}; monthlyReturns[y].annual=yp; } });
+          const years = Object.keys(monthlyReturns).sort(); years.forEach(y=>{ let maxDD=0, peak=0; dailyReturns.forEach(d=>{ if(d.date.getFullYear()===parseInt(y)){ if(d.equity>peak) peak=d.equity; const dd=((peak-d.equity)/peak)*100; if(dd>maxDD) maxDD=dd; } }); monthlyReturns[y].maxDrawdown=Math.round(maxDD*10)/10; });
+          const monthlyAverages={}, months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; let totalAnnualReturn=0,totalMaxDrawdown=0,validYears=0; for(let m=0;m<12;m++){ let sum=0,count=0; years.forEach(y=>{ if(monthlyReturns[y][m]!==undefined && monthlyReturns[y][m]!==null){ sum+=monthlyReturns[y][m]; count++; } }); monthlyAverages[m]= count>0 ? Math.round((sum/count)*10)/10 : 0; } years.forEach(y=>{ if(monthlyReturns[y].annual!==undefined){ totalAnnualReturn+=monthlyReturns[y].annual; totalMaxDrawdown+=monthlyReturns[y].maxDrawdown; validYears++; } });
+          const avgAnnualReturn = validYears>0 ? Math.round((totalAnnualReturn/validYears)*10)/10 : 0; const avgMaxDrawdown = validYears>0 ? Math.round((totalMaxDrawdown/validYears)*10)/10 : 0; const avgMonthlyReturn = Object.values(monthlyAverages).reduce((s,a)=>s+a,0)/12; const latestEquity = cleanedData.length>0 ? cleanedData[cleanedData.length-1].equity : 100000; const forecastAmount = Math.round((avgMonthlyReturn/100)*latestEquity); const forecastAmount100k = Math.round((avgMonthlyReturn/100)*100000);
+          const forecastBanner = document.getElementById(`forecastBanner-${idSuffix}`); const f1 = document.getElementById(`forecastAmount-${idSuffix}`); const f2 = document.getElementById(`forecastAmount100k-${idSuffix}`); if (forecastBanner && f1 && f2){ f1.textContent = `$${forecastAmount.toLocaleString()}`; f2.textContent = `$${forecastAmount100k.toLocaleString()}`; forecastBanner.style.display='block'; const dateSpan = document.getElementById(`nextMonthDates-${idSuffix}`); if(dateSpan){ const now=new Date(); let nm=now.getMonth()+1, ny=now.getFullYear(); if(nm>11){ nm=0; ny++; } const start=new Date(ny,nm,1), end=new Date(ny,nm+1,0); const fmt=(d)=>{ const mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'), yy=String(d.getFullYear()).slice(-2); return `${mm}/${dd}/${yy}`; }; dateSpan.textContent = `${fmt(start)} - ${fmt(end)}`; } }
+          let tableHTML = `<table class="monthly-table"><thead><tr><th>YEAR</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>TOTAL</th><th>MaxDD</th></tr></thead><tbody>`; years.forEach(y=>{ tableHTML+=`<tr>`; tableHTML+=`<td class="year-column">${y}</td>`; months.forEach((m,idx)=>{ const v=monthlyReturns[y][idx]; let cls='', disp='n/a'; if(v!==undefined && v!==null && !isNaN(v)){ disp=`${v.toFixed(1)}%`; cls = v<0 ? 'gain-negative' : 'gain-positive'; } tableHTML+=`<td class="${cls}">${disp}</td>`; }); const tot=monthlyReturns[y].annual; let tcls='', tdisp='n/a'; if(tot!==undefined && tot!==null && !isNaN(tot)){ tdisp=`${tot.toFixed(1)}%`; tcls = tot<0 ? 'gain-negative' : 'gain-positive'; } tableHTML+=`<td class="total-column ${tcls}">${tdisp}</td>`; const mdd=monthlyReturns[y].maxDrawdown; let mdisp='n/a'; if(mdd!==undefined && !isNaN(mdd)){ mdisp = `-${mdd.toFixed(1)}%`; } tableHTML+=`<td class="maxdd-column">${mdisp}</td>`; tableHTML+=`</tr>`; }); tableHTML+=`<tr class="avg-row"><td class="year-column">AVG</td>${months.map((m,idx)=>`<td>${monthlyAverages[idx].toFixed(1)}%</td>`).join('')}<td class="total-column">${avgAnnualReturn.toFixed(1)}%</td><td class="maxdd-column">-${avgMaxDrawdown.toFixed(1)}%</td></tr>`; tableHTML+=`</tbody></table>`;
+          const panel = document.getElementById(`monthlyTablePanel-${idSuffix}`); if (panel) panel.innerHTML = tableHTML;
+        })(meanReversionData);
+      } catch (error) {
+        console.error('Error loading block data:', error);
+        const ctx = document.getElementById(`equityChart-${idSuffix}`);
+        if (ctx) { const parent = ctx.parentElement; parent.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#ef4444;font-size:14px;">Failed to load chart data.</div>'; }
+      }
+    }
+
     // Load data when page loads
     document.addEventListener('DOMContentLoaded', function() {
       // Update next month dates
       updateNextMonthDates();
       
-      if (typeof Chart !== 'undefined') {
-        loadEquityData();
+      if (customDemoUrl && customDemoMap[customDemoUrl]) {
+        // Hide original combined view
+        const originalMain = document.querySelector('.main-layout');
+        const originalMonthly = document.querySelector('.monthly-table-section');
+        const originalForecast = document.getElementById('forecastBanner');
+        if (originalMain) originalMain.style.display = 'none';
+        if (originalMonthly) originalMonthly.style.display = 'none';
+        if (originalForecast) originalForecast.style.display = 'none';
+
+        const strategies = customDemoMap[customDemoUrl];
+        strategies.forEach((s, idx) => {
+          const urls = { newmrUrl: s.newmrUrl, spyUrl: defaultUrls.spyUrl, statsUrl: s.statsUrl, extendedUrl: s.extendedUrl };
+          const suffix = `${customDemoUrl}-${idx+1}`;
+          createStrategyBlock(suffix, `${s.name} Equity Curve`);
+          if (typeof Chart !== 'undefined') {
+            loadEquityDataFor(urls, suffix, s.name);
+          }
+        });
       } else {
-        console.error('Chart.js not loaded');
+        if (typeof Chart !== 'undefined') {
+          loadEquityData();
+        } else {
+          console.error('Chart.js not loaded');
+        }
       }
     });
   </script>
