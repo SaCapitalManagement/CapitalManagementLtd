@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Strategy Equity Curves</title>
+  <style>
+    .financial-dashboard-container * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .financial-dashboard-container {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: transparent;
+      line-height: 1.6;
+      color: #2d3748;
+      padding: 0;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+    }
+
+    /* Main Layout */
+    .financial-dashboard-container .main-layout {
+      display: grid;
+      grid-template-columns: 3fr 2fr; /* ~60% chart, ~40% stats on desktop */
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* Chart Section */
+    .financial-dashboard-container .chart-section {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .financial-dashboard-container .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 0px;
+      text-align: center;
+    }
+
+    .financial-dashboard-container .chart-container {
+      width: 100%;
+      height: 400px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .financial-dashboard-container .chart-container canvas {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* Statistics Column */
+    .financial-dashboard-container .stats-column {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* Statistics Grid - Exact match to image */
+    .financial-dashboard-container .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .financial-dashboard-container .stat-item {
+      background: #f1f3f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .financial-dashboard-container .stat-label {
+      font-size: 11px;
+      color: #6b7280;
+      font-weight: 500;
+      margin-bottom: 2px;
+      line-height: 1.2;
+    }
+
+    .financial-dashboard-container .stat-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1f2937;
+      line-height: 1.2;
+    }
+
+    .financial-dashboard-container .stat-sublabel {
+      font-size: 9px;
+      color: #6b7280;
+      font-weight: 400;
+      margin-top: 1px;
+      line-height: 1.2;
+    }
+
+    /* Special styling for specific stats */
+    .financial-dashboard-container .stat-value.positive {
+      color: #059669;
+    }
+
+    .financial-dashboard-container .stat-value.negative {
+      color: #000000;
+    }
+
+    /* Monthly Table Section */
+    .financial-dashboard-container .monthly-table-section {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+      overflow-x: auto;
+    }
+
+    .financial-dashboard-container .monthly-table-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 8px;
+    }
+
+    /* Monthly table - exact styling from image */
+    .financial-dashboard-container .monthly-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      margin: 0;
+    }
+
+    .financial-dashboard-container .monthly-table th {
+      background-color: #ddffdd;
+      color: #000;
+      font-weight: bold;
+      padding: 4px 3px;
+      text-align: center;
+      border: 1px solid #999;
+      font-size: 9px;
+    }
+
+    .financial-dashboard-container .monthly-table td {
+      padding: 3px 2px;
+      text-align: center;
+      border: 1px solid #ccc;
+      font-size: 9px;
+      font-weight: normal;
+    }
+
+    /* Year column styling */
+    .financial-dashboard-container .monthly-table .year-column {
+      font-weight: bold;
+      color: #000;
+      background-color: inherit;
+    }
+
+    /* Total and MaxDD columns */
+    .financial-dashboard-container .monthly-table .total-column,
+    .financial-dashboard-container .monthly-table .maxdd-column {
+      font-weight: bold;
+      color: #000;
+    }
+
+    /* Row alternating colors */
+    .financial-dashboard-container .monthly-table tbody tr:nth-child(even) {
+      background-color: #f0f0f0;
+    }
+
+    .financial-dashboard-container .monthly-table tbody tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+
+    /* Performance color coding */
+    .financial-dashboard-container .gain-positive {
+      color: #000 !important;
+    }
+
+    .financial-dashboard-container .gain-negative {
+      color: #ff0000 !important;
+    }
+
+    .financial-dashboard-container .gain-neutral {
+      color: #000 !important;
+    }
+
+    /* AVG row special styling */
+    .financial-dashboard-container .monthly-table .avg-row {
+      background-color: #ddffdd !important;
+    }
+
+    .financial-dashboard-container .monthly-table .avg-row td {
+      background-color: #ddffdd !important;
+      font-weight: bold !important;
+      color: #000 !important;
+    }
+
+    /* Loading state */
+    .financial-dashboard-container .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    /* Forecast banner responsive helpers */
+    .financial-dashboard-container #forecastBanner {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .financial-dashboard-container #forecastBanner .forecast-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 768px) {
+      .financial-dashboard-container #forecastBanner {
+        padding: 12px !important;
+        margin: 12px 0 !important;
+      }
+      .financial-dashboard-container #forecastBanner .forecast-header {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .financial-dashboard-container #forecastBanner .forecast-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+      }
+      .financial-dashboard-container #forecastBanner .forecast-card {
+        padding: 10px !important;
+      }
+      .financial-dashboard-container #forecastBanner .amount {
+        font-size: 18px !important;
+      }
+      .financial-dashboard-container #forecastBanner .subtext {
+        font-size: 9px !important;
+      }
+      .financial-dashboard-container #forecastBanner .forecast-title {
+        font-size: 13px !important;
+      }
+      .financial-dashboard-container #forecastBanner .forecast-pill {
+        font-size: 10px !important;
+        width: 100%;
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .financial-dashboard-container .main-layout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .financial-dashboard-container {
+        padding: 0;
+        width: 100%;
+        max-width: none;
+        overflow-x: hidden;
+      }
+
+      .financial-dashboard-container .chart-section,
+      .financial-dashboard-container .stats-column {
+        padding: 12px;
+        margin: 0;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .financial-dashboard-container .chart-container {
+        height: 280px;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .financial-dashboard-container .chart-container canvas {
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 280px !important;
+      }
+
+      .financial-dashboard-container .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+
+      .financial-dashboard-container .stat-item {
+        padding: 8px;
+        font-size: 11px;
+      }
+
+      .financial-dashboard-container .stat-value {
+        font-size: 12px;
+      }
+
+      .financial-dashboard-container .stat-label {
+        font-size: 9px;
+      }
+
+      .financial-dashboard-container .stat-sublabel {
+        font-size: 8px;
+      }
+
+      .financial-dashboard-container .monthly-table {
+        font-size: 8px;
+        min-width: 600px;
+      }
+
+      .financial-dashboard-container .monthly-table th,
+      .financial-dashboard-container .monthly-table td {
+        padding: 2px 1px;
+        font-size: 7px;
+      }
+
+      .financial-dashboard-container .monthly-table-section {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .financial-dashboard-container {
+        padding: 0;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+
+      .financial-dashboard-container .chart-section,
+      .financial-dashboard-container .stats-column,
+      .financial-dashboard-container .monthly-table-section {
+        padding: 8px;
+        margin: 0;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .financial-dashboard-container .chart-container {
+        height: 220px;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .financial-dashboard-container .chart-container canvas {
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 220px !important;
+      }
+
+      .financial-dashboard-container .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .financial-dashboard-container .stat-item {
+        padding: 8px;
+      }
+
+      .financial-dashboard-container .stat-value {
+        font-size: 11px;
+      }
+
+      .financial-dashboard-container .stat-label {
+        font-size: 9px;
+      }
+
+      .financial-dashboard-container .stat-sublabel {
+        font-size: 8px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="financial-dashboard-container">
+    <div class="main-layout">
+             <!-- Chart Section -->
+       <div class="chart-section">
+         <h2 class="chart-title" id="chartTitle">Strategy Equity Curve</h2>
+         <div class="chart-container">
+           <canvas id="equityChart" width="400" height="400"></canvas>
+         </div>
+         <div style="text-align: center; margin-top: 8px; font-size: 11px; color: #6b7280; font-style: italic;">
+           All results shown include trading costs in the calculations.
+         </div>
+       </div>
+
+      <!-- Statistics Column - Dynamic content -->
+      <div class="stats-column">
+        <div id="statsPanel">
+          <div class="loading">Loading statistics...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forecast Banner -->
+    <div id="forecastBanner" style="display: none; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #16a34a; border-radius: 8px; padding: 16px; margin: 16px 0; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);">
+      <div class="forecast-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                           <div class="forecast-title" style="font-size: 14px; font-weight: 600; color: #15803d; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 17L9 11L13 15L21 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Next Month's Forecasted Performance
+            <span id="nextMonthDates" style="font-size: 12px; font-weight: 400; opacity: 0.8; margin-left: 8px;"></span>
+          </div>
+        <div class="forecast-pill" style="font-size: 11px; color: #15803d; opacity: 0.7; background: rgba(255, 255, 255, 0.4); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(34, 197, 94, 0.2);">Calculated from historical monthly gains and losses (%)</div>
+      </div>
+      
+      <div class="forecast-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Current Portfolio Forecast -->
+        <div class="forecast-card" style="background: rgba(255, 255, 255, 0.6); border-radius: 6px; padding: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+          <div style="font-size: 11px; color: #15803d; margin-bottom: 4px; font-weight: 500;">Based on current portfolio size</div>
+          <div id="forecastAmount" class="amount" style="font-size: 20px; font-weight: 700; color: #166534; margin-bottom: 2px;">$0</div>
+          <div class="subtext" style="font-size: 10px; color: #15803d; opacity: 0.8;">Next month’s expected profit</div>
+        </div>
+        
+        <!-- $100K Starting Value Forecast -->
+        <div class="forecast-card" style="background: rgba(255, 255, 255, 0.6); border-radius: 6px; padding: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+          <div style="font-size: 11px; color: #15803d; margin-bottom: 4px; font-weight: 500;">Start today → next month’s profit</div>
+          <div id="forecastAmount100k" class="amount" style="font-size: 20px; font-weight: 700; color: #166534; margin-bottom: 2px;">$0</div>
+          <div class="subtext" style="font-size: 10px; color: #15803d; opacity: 0.8;">Forecasted profit, if you were starting fresh today</div>
+        </div>
+      </div>
+      <div class="forecast-disclaimer" style="font-size: 10px; color: #15803d; opacity: 0.8; margin-top: 8px;">
+        Past performance does not guarantee future results. Forecasts are estimates and may differ from actual results.
+      </div>
+    </div>
+
+    <!-- Monthly Performance Table -->
+    <div class="monthly-table-section">
+      <h3 class="monthly-table-title">Combined Monthly Percent Gains</h3>
+      <div id="monthlyTablePanel">
+        <div class="loading">Loading monthly performance data...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Helper to extract product handle from the iframe URL query string
+    function getProductHandle() {
+      const params = new URLSearchParams(window.location.search);
+      let handle = params.get('handle');
+      if (handle) return handle;
+
+      // Try to extract from pathname if not in query string
+      // Example: /products/parabolic-short-selling-strategy
+      const match = window.location.pathname.match(/products\/([^\/\?]+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return null;
+    }
+
+    // Helper to detect custom demo URLs
+    function getCustomDemoUrl() {
+      const params = new URLSearchParams(window.location.search);
+      let demoUrl = params.get('demo');
+      if (demoUrl) return demoUrl;
+
+      // Try to extract from pathname for custom demo URLs
+      // Example: /demo-test, /demo-test-2
+      const match = window.location.pathname.match(/demo-([^\/\?]+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return null;
+    }
+
+    // Mapping from product handle to their respective data URLs
+    const handleDataMap = {
+      'weekly-pullback-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydip.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipx.json?t=' + Date.now(),
+      },
+      'low-drawdown-nasdaq-mean-reversion-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmr.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrx.json?t=' + Date.now(),
+      },
+      'all-time-high-mean-reversion-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmr.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrx.json?t=' + Date.now(),
+      },
+      'etf-rotation-monthly-rebalance-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotation.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotationt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotationx.json?t=' + Date.now(),
+      },
+      'mean-reversion-2025-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json?t=' + Date.now(),
+      },
+      'modern-breakout-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakout.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutx.json?t=' + Date.now(),
+      },
+      'nasdaq-100-mean-reversion-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json?t=' + Date.now(),
+      },
+      'parabolic-short-realtest-qullamaggie-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmr.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrx.json?t=' + Date.now(),
+      },
+      'short-term-mean-reversion-realtest-connors-alvarez': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmr.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmrt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shorttermmrx.json?t=' + Date.now(),
+      },
+      'spx-mean-reversion-realtest-strategy': {
+        newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmr.json?t=' + Date.now(),
+        spyUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=' + Date.now(),
+        statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrt_stats.json?t=' + Date.now(),
+        extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/spxmrx.json?t=' + Date.now(),
+      },
+      // Add more products as needed
+    };
+
+    // Custom demo URL mappings for multiple strategies
+    const customDemoMap = {
+      'test': [
+        {
+          name: 'Weekly Pullback',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydip.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/weeklydipx.json?t=' + Date.now(),
+          color: '#22c55e'
+        },
+        {
+          name: 'Low Drawdown Nasdaq MR',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/ndxmrx.json?t=' + Date.now(),
+          color: '#3b82f6'
+        },
+        {
+          name: 'All-Time High MR',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/athmrx.json?t=' + Date.now(),
+          color: '#8b5cf6'
+        }
+      ],
+      'realtest-strategies-for-aggressive-alpha-hunters': [
+        {
+          name: 'Mean Reversion 2025',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025t_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/newmr2025x.json?t=' + Date.now()
+        },
+        {
+          name: 'Parabolic Short',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/shortsellmrx.json?t=' + Date.now()
+        },
+        {
+          name: 'Modern Breakout',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakout.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutx.json?t=' + Date.now()
+        },
+        {
+          name: 'Nasdaq 100 MR',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mr.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json?t=' + Date.now()
+        }
+      ],
+      'test-2': [
+        {
+          name: 'ETF Rotation',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotation.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotationt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/etfrotationx.json?t=' + Date.now(),
+          color: '#f59e0b'
+        },
+        {
+          name: 'Modern Breakout',
+          newmrUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakout.json?t=' + Date.now(),
+          statsUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutt_stats.json?t=' + Date.now(),
+          extendedUrl: 'https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/breakoutx.json?t=' + Date.now(),
+          color: '#ec4899'
+        }
+      ]
+    };
+
+    // Default URLs (current ones)
+    const defaultUrls = {
+      newmrUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/nasdaq_mr.json?t=" + Date.now(),
+      spyUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/main/public_json/spybenchmark.json?t=" + Date.now(),
+      statsUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrt_stats.json?t=" + Date.now(),
+      extendedUrl: "https://raw.githubusercontent.com/SaCapitalManagement/CapitalManagementLtd/refs/heads/main/public_json/nasdaq_mrx.json?t=" + Date.now()
+    };
+
+    // Get the URLs for the current product handle or custom demo
+    const productHandle = getProductHandle();
+    const customDemoUrl = getCustomDemoUrl();
+    console.log('Product handle:', productHandle);
+    console.log('Custom demo URL:', customDemoUrl);
+    
+    let currentUrls = defaultUrls;
+    let isCustomDemo = false;
+    
+    if (customDemoUrl && customDemoMap[customDemoUrl]) {
+      isCustomDemo = true;
+      currentUrls = { spyUrl: defaultUrls.spyUrl }; // Only keep SPY for comparison
+    } else if (productHandle && handleDataMap[productHandle]) {
+      currentUrls = handleDataMap[productHandle];
+    }
+    
+    console.log('Current URLs:', currentUrls);
+    console.log('Is custom demo:', isCustomDemo);
+
+    // Function to get strategy name from handle
+    function getStrategyName(handle) {
+      const strategyNames = {
+        'weekly-pullback-realtest-strategy': 'Weekly Pullback',
+        'low-drawdown-nasdaq-mean-reversion-realtest-strategy': 'Low Drawdown Nasdaq MR',
+        'all-time-high-mean-reversion-realtest-strategy': 'All-Time High MR',
+        'etf-rotation-monthly-rebalance-realtest-strategy': 'ETF Rotation',
+        'mean-reversion-2025-realtest-strategy': 'Mean Reversion 2025',
+        'modern-breakout-realtest-strategy': 'Modern Breakout',
+        'nasdaq-100-mean-reversion-realtest-strategy': 'Nasdaq 100 MR',
+        'parabolic-short-realtest-qullamaggie-strategy': 'Parabolic Short',
+        'short-term-mean-reversion-realtest-connors-alvarez': 'Short-Term MR',
+        'spx-mean-reversion-realtest-strategy': 'SPX Mean Reversion'
+      };
+      return strategyNames[handle] || 'Strategy';
+    }
+
+    // Function to calculate and display next month's date range
+    function updateNextMonthDates() {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Calculate next month
+      let nextMonth = currentMonth + 1;
+      let nextYear = currentYear;
+      
+      if (nextMonth > 11) {
+        nextMonth = 0;
+        nextYear++;
+      }
+      
+      // Create start and end dates for next month
+      const startDate = new Date(nextYear, nextMonth, 1);
+      const endDate = new Date(nextYear, nextMonth + 1, 0); // Last day of next month
+      
+      // Format dates as MM/DD/YY
+      const formatDate = (date) => {
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const year = String(date.getFullYear()).slice(-2);
+        return `${month}/${day}/${year}`;
+      };
+      
+      const dateRange = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+      
+      // Update the span element
+      const dateSpan = document.getElementById('nextMonthDates');
+      if (dateSpan) {
+        dateSpan.textContent = dateRange;
+      }
+    }
+
+    async function fetchJsonOrLog(url, label) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+        return await res.json();
+      } catch (e) {
+        console.error(`Error fetching ${label} from ${url}:`, e);
+        throw e;
+      }
+    }
+
+    let chart = null;
+
+    // Function to fetch data and create chart
+    async function loadEquityData() {
+      try {
+        // Show loading state
+        const ctx = document.getElementById('equityChart');
+        if (!ctx) return;
+
+        let datasets = [];
+        let allDates = [];
+        let stats, extended;
+
+        // Helper to process raw data into [{x, y}] pairs
+        const processData = (data) => {
+          return data.filter(d => d.Equity && !isNaN(d.Equity)).map(item => ({
+            x: item.Date,
+            y: parseFloat(item.Equity)
+          }));
+        };
+
+        if (isCustomDemo) {
+          // Handle custom demo with multiple strategies
+          const customStrategies = customDemoMap[customDemoUrl];
+          const strategyData = [];
+          
+          // Fetch data for all strategies
+          for (const strategy of customStrategies) {
+            try {
+              const data = await fetchJsonOrLog(strategy.newmrUrl, strategy.name);
+              strategyData.push({ strategy, data });
+            } catch (error) {
+              console.error(`Error fetching data for ${strategy.name}:`, error);
+            }
+          }
+
+          // Fetch SPY data for comparison
+          const spyData = await fetchJsonOrLog(currentUrls.spyUrl, 'SPY');
+
+          // Process strategy data
+          strategyData.forEach(({ strategy, data }) => {
+            const processed = processData(data);
+            if (processed.length > 0) {
+              datasets.push({
+                label: strategy.name,
+                data: processed.map(item => item.y),
+                borderColor: strategy.color,
+                backgroundColor: strategy.color + '20',
+                borderWidth: 1,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 3
+              });
+              
+              // Use first strategy's dates for x-axis
+              if (allDates.length === 0) {
+                allDates = processed.map(item => item.x);
+              }
+            }
+          });
+
+          // Add SPY dataset
+          const spyProcessed = processData(spyData);
+          if (spyProcessed.length > 0) {
+            datasets.push({
+              label: 'SPY Buy & Hold',
+              data: spyProcessed.map(item => item.y),
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 1,
+              fill: true,
+              tension: 0.1,
+              pointRadius: 0,
+              pointHoverRadius: 3
+            });
+          }
+
+          // Use first strategy's stats for display
+          if (strategyData.length > 0) {
+            const firstStrategy = strategyData[0];
+            stats = await fetchJsonOrLog(firstStrategy.strategy.statsUrl, 'stats');
+            extended = await fetchJsonOrLog(firstStrategy.strategy.extendedUrl, 'extended');
+          }
+        } else {
+          // Handle single strategy (original functionality)
+          const { newmrUrl, spyUrl, statsUrl, extendedUrl } = currentUrls;
+          const [meanReversionData, spyData, statsData, extendedData] = await Promise.all([
+            fetchJsonOrLog(newmrUrl, 'newmrUrl'),
+            fetchJsonOrLog(spyUrl, 'spyUrl'),
+            fetchJsonOrLog(statsUrl, 'statsUrl'),
+            fetchJsonOrLog(extendedUrl, 'extendedUrl')
+          ]);
+
+          stats = statsData;
+          extended = extendedData;
+
+          const meanReversionProcessed = processData(meanReversionData);
+          const spyProcessed = processData(spyData);
+
+          // Ensure both datasets have the same length and dates
+          const minLength = Math.min(meanReversionProcessed.length, spyProcessed.length);
+          const meanReversionTrimmed = meanReversionProcessed.slice(0, minLength);
+          const spyTrimmed = spyProcessed.slice(0, minLength);
+
+          allDates = meanReversionTrimmed.map(item => item.x);
+
+          // Get strategy name for legend
+          const strategyName = getStrategyName(productHandle);
+
+          datasets = [
+            {
+              label: strategyName,
+              data: meanReversionTrimmed.map(item => item.y),
+              borderColor: '#22c55e',
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              borderWidth: 1,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 0,
+              pointHoverRadius: 3
+            },
+            {
+              label: 'SPY Buy & Hold',
+              data: spyTrimmed.map(item => item.y),
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 1,
+              fill: true,
+              tension: 0.1,
+              pointRadius: 0,
+              pointHoverRadius: 3
+            }
+          ];
+        }
+
+        // Update statistics panel with dynamic data
+        if (stats && extended) {
+          updateStatsPanel(stats, extended);
+        }
+
+        // Update chart title for custom demos
+        if (isCustomDemo) {
+          const chartTitle = document.getElementById('chartTitle');
+          if (chartTitle) {
+            const customStrategies = customDemoMap[customDemoUrl];
+            if (customStrategies && customStrategies.length > 0) {
+              const strategyNames = customStrategies.map(s => s.name).join(' vs ');
+              chartTitle.textContent = `${strategyNames} vs SPY Buy & Hold`;
+            }
+          }
+        }
+
+        // Create labels for each data point (for hover) and display labels (for x-axis)
+        if (allDates.length === 0) return;
+        
+        // Generate year-based labels showing every year from 00 to 25
+        const firstYear = new Date(allDates[0]).getFullYear();
+        const lastYear = new Date(allDates[allDates.length - 1]).getFullYear();
+        
+        const labels = allDates.map((dateStr, index) => {
+          const date = new Date(dateStr);
+          const year = date.getFullYear();
+          const shortYear = String(year).slice(-2); // Get last 2 digits (00, 01, etc.)
+          
+          // Show label for each year change
+          if (index === 0) return shortYear; // Always show first year
+          
+          const prevDate = new Date(allDates[index - 1]);
+          const prevYear = prevDate.getFullYear();
+          
+          // Show label when year changes
+          if (year !== prevYear) {
+            return shortYear;
+          }
+          return '';
+        });
+
+        // Register vertical line plugin
+        const verticalLinePlugin = {
+          id: 'verticalLine',
+          beforeDraw: (chart) => {
+            if (chart.tooltip?._active && chart.tooltip._active.length) {
+              const activePoint = chart.tooltip._active[0];
+              const ctx = chart.ctx;
+              const x = activePoint.element.x;
+              const topY = chart.scales.y.top;
+              const bottomY = chart.scales.y.bottom;
+
+              ctx.save();
+              ctx.beginPath();
+              ctx.setLineDash([3, 3]);
+              ctx.moveTo(x, topY);
+              ctx.lineTo(x, bottomY);
+              ctx.lineWidth = 1;
+              ctx.strokeStyle = '#9ca3af';
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+        };
+
+        // Get strategy name for legend
+        const strategyName = getStrategyName(productHandle);
+
+        // Create the chart
+        if (typeof Chart !== 'undefined') {
+          Chart.register(verticalLinePlugin);
+          chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: datasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              devicePixelRatio: 1,
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: {
+                    fontSize: 12,
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    usePointStyle: true,
+                    pointStyle: 'rect',
+                    padding: 15
+                  }
+                },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false,
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  titleColor: '#374151',
+                  bodyColor: '#374151',
+                  borderColor: '#e5e7eb',
+                  borderWidth: 1,
+                  cornerRadius: 6,
+                  displayColors: true,
+                  callbacks: {
+                    title: function(tooltipItems) {
+                      const index = tooltipItems[0].dataIndex;
+                      const date = new Date(allDates[index]);
+                      return date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      });
+                    },
+                    label: function(context) {
+                      const value = context.parsed.y;
+                      const formattedValue = value >= 1000000 ? 
+                        '$' + (value / 1000000).toFixed(1) + 'M' : 
+                        '$' + (value / 1000).toFixed(0) + 'K';
+                      return context.dataset.label + ': ' + formattedValue;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  display: true,
+                  title: {
+                    display: false
+                  },
+                  ticks: {
+                    maxTicksLimit: 26,
+                    font: {
+                      size: 10
+                    },
+                    autoSkip: false,
+                    callback: function(value, index, values) {
+                      const label = this.getLabelForValue(value);
+                      return label !== '' ? label : undefined;
+                    }
+                  },
+                  grid: {
+                    color: '#f3f4f6',
+                    drawBorder: false
+                  }
+                },
+                y: {
+                  display: true,
+                  type: 'logarithmic',
+                  title: {
+                    display: false
+                  },
+                  ticks: {
+                    callback: function(value) {
+                      if (value >= 1000000) {
+                        return '$' + (value / 1000000).toFixed(0) + 'M';
+                      } else if (value >= 100000) {
+                        return '$' + (value / 1000).toFixed(0) + 'K';
+                      }
+                      return '$' + value.toLocaleString();
+                    },
+                    font: {
+                      size: 10
+                    }
+                  },
+                  grid: {
+                    color: '#f3f4f6',
+                    drawBorder: false
+                  }
+                }
+              },
+              interaction: {
+                mode: 'index',
+                axis: 'x',
+                intersect: false
+              },
+
+              elements: {
+                line: {
+                  tension: 0.1
+                }
+              }
+            }
+          });
+        }
+
+        // Generate monthly table using compounded daily returns formula
+        if (isCustomDemo) {
+          // For custom demo, use first strategy's data for monthly table
+          const customStrategies = customDemoMap[customDemoUrl];
+          if (customStrategies && customStrategies.length > 0) {
+            const firstStrategyData = await fetchJsonOrLog(customStrategies[0].newmrUrl, 'first strategy');
+            generateMonthlyTable(firstStrategyData);
+          }
+        } else {
+          // For single strategy, use the original data
+          const { newmrUrl } = currentUrls;
+          const meanReversionData = await fetchJsonOrLog(newmrUrl, 'newmrUrl');
+          generateMonthlyTable(meanReversionData);
+        }
+
+      } catch (error) {
+        console.error('Error loading equity data:', error);
+        // Fallback to show error message
+        const ctx = document.getElementById('equityChart');
+        if (ctx) {
+          const parent = ctx.parentElement;
+          parent.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 400px; color: #ef4444; font-size: 14px;">Failed to load chart data. Please check your connection.</div>';
+        }
+      }
+    }
+
+         // Function to update statistics panel with dynamic data
+     function updateStatsPanel(stats, extended) {
+       const statPanel = document.getElementById("statsPanel");
+       
+       // Parse numbers from extended data
+       function parseNumber(str) {
+         if (!str) return 0;
+         return Number(str.toString().replace(/,/g, '')) || 0;
+       }
+       
+       function formatNumber(num) {
+         return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+       }
+       
+       const sumCommission = parseNumber(extended.sum_commission);
+       let sumDividends = parseNumber(extended.sum_dividends);
+       if (sumDividends <= 0) sumDividends = 0;
+       const avgBars = extended.avg_bars || 'n/a';
+
+               // Calculate total return percentage from NetProfit
+        const netProfit = parseNumber(stats.NetProfit);
+        const totalReturn = ((netProfit / 100000) * 100).toFixed(1); // Assuming starting with $100K
+        const formattedTotalReturn = parseFloat(totalReturn).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+       // Calculate winning trades from PctWins
+       const totalTrades = parseNumber(stats.Trades);
+       const winRate = parseFloat(stats.PctWins);
+       const winningTrades = Math.round((totalTrades * winRate) / 100);
+
+       // Determine frequency text based on total trades
+       let frequencyText = '';
+       if (totalTrades < 100) {
+         frequencyText = 'Low frequency execution';
+       } else if (totalTrades <= 1000) {
+         frequencyText = 'Medium frequency execution';
+       } else {
+         frequencyText = 'High frequency execution';
+       }
+
+       // Determine momentum text
+       const avgHoldingDays = parseInt(avgBars) || 6;
+       const momentumText = avgHoldingDays < 10 ? 'Short-term momentum' : 'Long-term momentum';
+
+             statPanel.innerHTML = `
+         <div class="stats-grid">
+           <!-- Net Profit -->
+           <div class="stat-item">
+             <div class="stat-label">Net Profit</div>
+             <div class="stat-value positive">$${stats.NetProfit}</div>
+                           <div class="stat-sublabel">+${formattedTotalReturn}% total return</div>
+           </div>
+
+           <!-- Total Trades -->
+           <div class="stat-item">
+             <div class="stat-label">Total Trades</div>
+             <div class="stat-value">${stats.Trades}</div>
+             <div class="stat-sublabel">${frequencyText}</div>
+           </div>
+
+           <!-- Max Drawdown -->
+           <div class="stat-item">
+             <div class="stat-label">Max Drawdown</div>
+             <div class="stat-value negative">-${Math.abs(stats.Drawdown)}%</div>
+             <div class="stat-sublabel">Controlled risk exposure</div>
+           </div>
+
+           <!-- Expectancy -->
+           <div class="stat-item">
+             <div class="stat-label">Expectancy</div>
+             <div class="stat-value">${stats.Expectancy}</div>
+             <div class="stat-sublabel">Average trade profit</div>
+           </div>
+
+           <!-- Sharpe Ratio -->
+           <div class="stat-item">
+             <div class="stat-label">Sharpe Ratio</div>
+             <div class="stat-value">${stats.Sharpe}</div>
+             <div class="stat-sublabel">Risk-adjusted return</div>
+           </div>
+
+           <!-- MAR Ratio -->
+           <div class="stat-item">
+             <div class="stat-label">MAR Ratio</div>
+             <div class="stat-value">${stats.MAR}</div>
+           </div>
+
+           <!-- Win % -->
+           <div class="stat-item">
+             <div class="stat-label">Win %</div>
+             <div class="stat-value">${stats.PctWins}</div>
+             <div class="stat-sublabel">${winningTrades.toLocaleString()} winning trades</div>
+           </div>
+
+           <!-- Max Exposure -->
+           <div class="stat-item">
+             <div class="stat-label">Max Exposure</div>
+             <div class="stat-value">${stats.MaxExposure}%</div>
+           </div>
+
+           <!-- Paid Commissions -->
+           <div class="stat-item">
+             <div class="stat-label">Paid Commissions</div>
+             <div class="stat-value">$${formatNumber(sumCommission)}</div>
+             <div class="stat-sublabel">IBKR stock trading fees</div>
+           </div>
+
+           <!-- Earned Dividends -->
+           <div class="stat-item">
+             <div class="stat-label">Earned Dividends</div>
+             <div class="stat-value">$${formatNumber(sumDividends)}</div>
+             <div class="stat-sublabel">Passive income generated</div>
+           </div>
+
+                       <!-- Avg Holding Days -->
+            <div class="stat-item">
+              <div class="stat-label">Avg Holding Days</div>
+              <div class="stat-value">${avgBars}</div>
+              <div class="stat-sublabel">${momentumText}</div>
+            </div>
+
+                      </div>
+       `;
+    }
+
+    // Generate monthly table using compounded daily returns formula
+    async function generateMonthlyTable(rawData) {
+      try {
+        // Step 1: Calculate daily returns (exactly like Python pandas pct_change())
+        const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity));
+        validData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+        
+        // Clean equity values (remove $, commas, spaces) and convert to float
+        const cleanedData = validData.map(d => ({
+          date: new Date(d.Date),
+          equity: parseFloat(d.Equity.toString().replace(/[$,]/g, '').trim())
+        }));
+        
+        // Calculate daily returns using pct_change() method (same as Python)
+        const dailyReturns = [];
+        for (let i = 1; i < cleanedData.length; i++) {
+          const currentEquity = cleanedData[i].equity;
+          const previousEquity = cleanedData[i-1].equity;
+          if (previousEquity > 0) {
+            const dailyReturn = (currentEquity - previousEquity) / previousEquity; // This is pct_change()
+            dailyReturns.push({
+              date: cleanedData[i].date,
+              return: dailyReturn,
+              equity: currentEquity
+            });
+          }
+        }
+
+        // Step 2: Group daily returns by year and month
+        const monthlyGroups = {};
+        const yearlyGroups = {};
+        
+        dailyReturns.forEach(dayData => {
+          const year = dayData.date.getFullYear();
+          const month = dayData.date.getMonth(); // 0-11
+          const monthKey = `${year}-${month}`;
+          
+          // Group by month
+          if (!monthlyGroups[monthKey]) {
+            monthlyGroups[monthKey] = {
+              year: year,
+              month: month,
+              dailyReturns: []
+            };
+          }
+          monthlyGroups[monthKey].dailyReturns.push(dayData.return);
+          
+          // Group by year
+          if (!yearlyGroups[year]) {
+            yearlyGroups[year] = {
+              dailyReturns: []
+            };
+          }
+          yearlyGroups[year].dailyReturns.push(dayData.return);
+        });
+
+        // Step 3: Calculate monthly returns (compounded from daily)
+        const monthlyReturns = {};
+        Object.values(monthlyGroups).forEach(monthData => {
+          if (monthData.dailyReturns.length > 0) {
+            // GrowthFactor_M = product over t in M of (1 + R[t])
+            const growthFactor = monthData.dailyReturns.reduce((product, dailyReturn) => {
+              return product * (1 + dailyReturn);
+            }, 1);
+            
+            // MonthlyReturn_M = GrowthFactor_M - 1
+            const monthlyReturn = growthFactor - 1;
+            
+            // MonthlyPercent_M = round(MonthlyReturn_M * 100, 1)
+            const monthlyPercent = Math.round(monthlyReturn * 100 * 10) / 10;
+            
+            if (!monthlyReturns[monthData.year]) {
+              monthlyReturns[monthData.year] = {};
+            }
+            monthlyReturns[monthData.year][monthData.month] = monthlyPercent;
+          }
+        });
+
+        // Step 4: Calculate yearly returns (compounded from daily)
+        Object.keys(yearlyGroups).forEach(year => {
+          const yearData = yearlyGroups[year];
+          if (yearData.dailyReturns.length > 0) {
+            // GrowthFactor_Y = product over t in Y of (1 + R[t])
+            const growthFactor = yearData.dailyReturns.reduce((product, dailyReturn) => {
+              return product * (1 + dailyReturn);
+            }, 1);
+            
+            // YearlyReturn_Y = GrowthFactor_Y - 1
+            const yearlyReturn = growthFactor - 1;
+            
+            // YearlyPercent_Y = round(YearlyReturn_Y * 100, 1)
+            const yearlyPercent = Math.round(yearlyReturn * 100 * 10) / 10;
+            
+            if (!monthlyReturns[year]) {
+              monthlyReturns[year] = {};
+            }
+            monthlyReturns[year].annual = yearlyPercent;
+          }
+        });
+
+        // Step 5: Calculate max drawdown for each year
+        const years = Object.keys(monthlyReturns).sort();
+        years.forEach(year => {
+          let maxDrawdown = 0;
+          let peak = 0;
+          
+          // Find the peak and calculate drawdown from daily returns
+          dailyReturns.forEach(dayData => {
+            if (dayData.date.getFullYear() === parseInt(year)) {
+              if (dayData.equity > peak) {
+                peak = dayData.equity;
+              }
+              const drawdown = ((peak - dayData.equity) / peak) * 100;
+              if (drawdown > maxDrawdown) {
+                maxDrawdown = drawdown;
+              }
+            }
+          });
+          
+          monthlyReturns[year].maxDrawdown = Math.round(maxDrawdown * 10) / 10;
+        });
+
+        // Calculate averages
+        const monthlyAverages = {};
+        let totalAnnualReturn = 0;
+        let totalMaxDrawdown = 0;
+        let validYears = 0;
+
+        for (let month = 0; month < 12; month++) {
+          let sum = 0;
+          let count = 0;
+          years.forEach(year => {
+            if (monthlyReturns[year][month] !== undefined && monthlyReturns[year][month] !== null) {
+              sum += monthlyReturns[year][month];
+              count++;
+            }
+          });
+          monthlyAverages[month] = count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+        }
+
+        years.forEach(year => {
+          if (monthlyReturns[year].annual !== undefined) {
+            totalAnnualReturn += monthlyReturns[year].annual;
+            totalMaxDrawdown += monthlyReturns[year].maxDrawdown;
+            validYears++;
+          }
+        });
+
+                 const avgAnnualReturn = validYears > 0 ? Math.round((totalAnnualReturn / validYears) * 10) / 10 : 0;
+         const avgMaxDrawdown = validYears > 0 ? Math.round((totalMaxDrawdown / validYears) * 10) / 10 : 0;
+
+                             // Calculate forecast for next month based on latest equity value
+          const avgMonthlyReturn = Object.values(monthlyAverages).reduce((sum, avg) => sum + avg, 0) / 12;
+          
+          // Get the latest equity value from the data
+          const latestEquity = cleanedData.length > 0 ? cleanedData[cleanedData.length - 1].equity : 100000;
+          const forecastAmount = Math.round((avgMonthlyReturn / 100) * latestEquity);
+          const forecastAmount100k = Math.round((avgMonthlyReturn / 100) * 100000);
+          
+          // Update forecast banner
+          const forecastBanner = document.getElementById('forecastBanner');
+          const forecastAmountElement = document.getElementById('forecastAmount');
+          const forecastAmount100kElement = document.getElementById('forecastAmount100k');
+          if (forecastBanner && forecastAmountElement && forecastAmount100kElement) {
+            forecastAmountElement.textContent = `$${forecastAmount.toLocaleString()}`;
+            forecastAmount100kElement.textContent = `$${forecastAmount100k.toLocaleString()}`;
+            forecastBanner.style.display = 'block';
+            
+            // Update the next month dates when banner is shown
+            updateNextMonthDates();
+          }
+
+         // Generate HTML table with exact styling
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let tableHTML = `
+          <table class="monthly-table">
+            <thead>
+              <tr>
+                <th>YEAR</th>
+                ${months.map(month => `<th>${month}</th>`).join('')}
+                <th>TOTAL</th>
+                <th>MaxDD</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        // Add data rows
+        years.forEach(year => {
+          tableHTML += `<tr>`;
+          tableHTML += `<td class="year-column">${year}</td>`;
+          
+          months.forEach((month, index) => {
+            const value = monthlyReturns[year][index];
+            let cellClass = '';
+            let displayValue = 'n/a';
+            
+            if (value !== undefined && value !== null && !isNaN(value)) {
+              displayValue = `${value.toFixed(1)}%`;
+              cellClass = value < 0 ? 'gain-negative' : 'gain-positive';
+            }
+            
+            tableHTML += `<td class="${cellClass}">${displayValue}</td>`;
+          });
+          
+          // Total column
+          const totalValue = monthlyReturns[year].annual;
+          let totalClass = '';
+          let totalDisplay = 'n/a';
+          
+          if (totalValue !== undefined && totalValue !== null && !isNaN(totalValue)) {
+            totalDisplay = `${totalValue.toFixed(1)}%`;
+            totalClass = totalValue < 0 ? 'gain-negative' : 'gain-positive';
+          }
+          
+          tableHTML += `<td class="total-column ${totalClass}">${totalDisplay}</td>`;
+          
+          // MaxDD column (always black text)
+          const maxDDValue = monthlyReturns[year].maxDrawdown;
+          let maxDDDisplay = 'n/a';
+          if (maxDDValue !== undefined && !isNaN(maxDDValue)) {
+            maxDDDisplay = `-${maxDDValue.toFixed(1)}%`;
+          }
+          
+          tableHTML += `<td class="maxdd-column">${maxDDDisplay}</td>`;
+          tableHTML += `</tr>`;
+        });
+
+        // Add AVG row
+        tableHTML += `
+          <tr class="avg-row">
+            <td class="year-column">AVG</td>
+            ${months.map((month, index) => `<td>${monthlyAverages[index].toFixed(1)}%</td>`).join('')}
+            <td class="total-column">${avgAnnualReturn.toFixed(1)}%</td>
+            <td class="maxdd-column">-${avgMaxDrawdown.toFixed(1)}%</td>
+          </tr>
+        `;
+
+        tableHTML += `
+            </tbody>
+          </table>
+        `;
+
+        document.getElementById('monthlyTablePanel').innerHTML = tableHTML;
+        console.log('Generated monthly table with dynamic data');
+
+      } catch (error) {
+        console.error('Error generating monthly table:', error);
+        document.getElementById('monthlyTablePanel').innerHTML = `
+          <div class="loading">Error generating monthly performance table from data source.</div>
+        `;
+      }
+    }
+
+    // Create a separate, stacked block for each strategy (chart + stats + monthly table)
+    function createStrategyBlock(idSuffix, titleText) {
+      const container = document.querySelector('.financial-dashboard-container');
+      const wrapper = document.createElement('div');
+      wrapper.style.margin = '16px 0';
+      wrapper.innerHTML = `
+        <div class="main-layout">
+          <div class="chart-section">
+            <h2 class="chart-title">${titleText}</h2>
+            <div class="chart-container">
+              <canvas id="equityChart-${idSuffix}" width="400" height="400"></canvas>
+            </div>
+            <div style="text-align: center; margin-top: 8px; font-size: 11px; color: #6b7280; font-style: italic;">
+              All results shown include trading costs in the calculations.
+            </div>
+          </div>
+          <div class="stats-column">
+            <div id="statsPanel-${idSuffix}">
+              <div class="loading">Loading statistics...</div>
+            </div>
+          </div>
+        </div>
+        <div id="forecastBanner-${idSuffix}" style="display: none; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #16a34a; border-radius: 8px; padding: 16px; margin: 16px 0; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);">
+          <div class="forecast-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="forecast-title" style="font-size: 14px; font-weight: 600; color: #15803d; display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 17L9 11L13 15L21 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Next Month's Forecasted Performance
+              <span id="nextMonthDates-${idSuffix}" style="font-size: 12px; font-weight: 400; opacity: 0.8; margin-left: 8px;"></span>
+            </div>
+            <div class="forecast-pill" style="font-size: 11px; color: #15803d; opacity: 0.7; background: rgba(255, 255, 255, 0.4); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(34, 197, 94, 0.2);">Calculated from historical monthly gains and losses (%)</div>
+          </div>
+          <div class="forecast-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="forecast-card" style="background: rgba(255, 255, 255, 0.6); border-radius: 6px; padding: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+              <div style="font-size: 11px; color: #15803d; margin-bottom: 4px; font-weight: 500;">Based on current portfolio size</div>
+              <div id="forecastAmount-${idSuffix}" class="amount" style="font-size: 20px; font-weight: 700; color: #166534; margin-bottom: 2px;">$0</div>
+              <div class="subtext" style="font-size: 10px; color: #15803d; opacity: 0.8;">Next month’s expected profit</div>
+            </div>
+            <div class="forecast-card" style="background: rgba(255, 255, 255, 0.6); border-radius: 6px; padding: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+              <div style="font-size: 11px; color: #15803d; margin-bottom: 4px; font-weight: 500;">Start today → next month’s profit</div>
+              <div id="forecastAmount100k-${idSuffix}" class="amount" style="font-size: 20px; font-weight: 700; color: #166534; margin-bottom: 2px;">$0</div>
+              <div class="subtext" style="font-size: 10px; color: #15803d; opacity: 0.8;">Forecasted profit, if you were starting fresh today</div>
+            </div>
+          </div>
+          <div class="forecast-disclaimer" style="font-size: 10px; color: #15803d; opacity: 0.8; margin-top: 8px;">
+            Past performance does not guarantee future results. Forecasts are estimates and may differ from actual results.
+          </div>
+        </div>
+        <div class="monthly-table-section">
+          <h3 class="monthly-table-title">Combined Monthly Percent Gains</h3>
+          <div id="monthlyTablePanel-${idSuffix}">
+            <div class="loading">Loading monthly performance data...</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(wrapper);
+    }
+
+    async function loadEquityDataFor(urls, idSuffix, strategyLabel) {
+      try {
+        const ctx = document.getElementById(`equityChart-${idSuffix}`);
+        if (!ctx) return;
+
+        const [meanReversionData, spyData, stats, extended] = await Promise.all([
+          fetchJsonOrLog(urls.newmrUrl, 'newmrUrl'),
+          fetchJsonOrLog(urls.spyUrl, 'spyUrl'),
+          fetchJsonOrLog(urls.statsUrl, 'statsUrl'),
+          fetchJsonOrLog(urls.extendedUrl, 'extendedUrl')
+        ]);
+
+        // Scoped stats panel update
+        (function updateStatsPanelScoped(statsLocal, extendedLocal){
+          const statPanel = document.getElementById(`statsPanel-${idSuffix}`);
+          if (!statPanel) return;
+          function parseNumber(str){ if(!str) return 0; return Number(str.toString().replace(/,/g, ''))||0; }
+          function formatNumber(num){ return num.toLocaleString(undefined,{ maximumFractionDigits:0 }); }
+          const sumCommission = parseNumber(extendedLocal.sum_commission);
+          let sumDividends = parseNumber(extendedLocal.sum_dividends); if (sumDividends <= 0) sumDividends = 0;
+          const avgBars = extendedLocal.avg_bars || 'n/a';
+          const netProfit = parseNumber(statsLocal.NetProfit);
+          const totalReturn = ((netProfit / 100000) * 100).toFixed(1);
+          const formattedTotalReturn = parseFloat(totalReturn).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+          const totalTrades = parseNumber(statsLocal.Trades);
+          const winRate = parseFloat(statsLocal.PctWins);
+          const winningTrades = Math.round((totalTrades * winRate) / 100);
+          let frequencyText = totalTrades < 100 ? 'Low frequency execution' : (totalTrades <= 1000 ? 'Medium frequency execution' : 'High frequency execution');
+          const avgHoldingDays = parseInt(avgBars) || 6;
+          const momentumText = avgHoldingDays < 10 ? 'Short-term momentum' : 'Long-term momentum';
+          statPanel.innerHTML = `
+            <div class="stats-grid">
+              <div class="stat-item"><div class="stat-label">Net Profit</div><div class="stat-value positive">$${statsLocal.NetProfit}</div><div class="stat-sublabel">+${formattedTotalReturn}% total return</div></div>
+              <div class="stat-item"><div class="stat-label">Total Trades</div><div class="stat-value">${statsLocal.Trades}</div><div class="stat-sublabel">${frequencyText}</div></div>
+              <div class="stat-item"><div class="stat-label">Max Drawdown</div><div class="stat-value negative">-${Math.abs(statsLocal.Drawdown)}%</div><div class="stat-sublabel">Controlled risk exposure</div></div>
+              <div class="stat-item"><div class="stat-label">Expectancy</div><div class="stat-value">${statsLocal.Expectancy}</div><div class="stat-sublabel">Average trade profit</div></div>
+              <div class="stat-item"><div class="stat-label">Sharpe Ratio</div><div class="stat-value">${statsLocal.Sharpe}</div><div class="stat-sublabel">Risk-adjusted return</div></div>
+              <div class="stat-item"><div class="stat-label">MAR Ratio</div><div class="stat-value">${statsLocal.MAR}</div></div>
+              <div class="stat-item"><div class="stat-label">Win %</div><div class="stat-value">${statsLocal.PctWins}</div><div class="stat-sublabel">${winningTrades.toLocaleString()} winning trades</div></div>
+              <div class="stat-item"><div class="stat-label">Max Exposure</div><div class="stat-value">${statsLocal.MaxExposure}%</div></div>
+              <div class="stat-item"><div class="stat-label">Paid Commissions</div><div class="stat-value">$${formatNumber(sumCommission)}</div><div class="stat-sublabel">IBKR stock trading fees</div></div>
+              <div class="stat-item"><div class="stat-label">Earned Dividends</div><div class="stat-value">$${formatNumber(sumDividends)}</div><div class="stat-sublabel">Passive income generated</div></div>
+              <div class="stat-item"><div class="stat-label">Avg Holding Days</div><div class="stat-value">${avgBars}</div><div class="stat-sublabel">${momentumText}</div></div>
+            </div>`;
+        })(stats, extended);
+
+        // Chart build
+        const processData = (data) => data.filter(d => d.Equity && !isNaN(d.Equity)).map(item => ({ x: item.Date, y: parseFloat(item.Equity) }));
+        const meanReversionProcessed = processData(meanReversionData);
+        const spyProcessed = processData(spyData);
+        const minLength = Math.min(meanReversionProcessed.length, spyProcessed.length);
+        const meanReversionTrimmed = meanReversionProcessed.slice(0, minLength);
+        const spyTrimmed = spyProcessed.slice(0, minLength);
+        const allDates = meanReversionTrimmed.map(item => item.x);
+        const labels = allDates.map((dateStr, index) => {
+          const date = new Date(dateStr); const year = date.getFullYear(); const shortYear = String(year).slice(-2);
+          if (index === 0) return shortYear; const prevYear = new Date(allDates[index - 1]).getFullYear(); return year !== prevYear ? shortYear : '';
+        });
+        const verticalLinePlugin = { id: 'verticalLine', beforeDraw: (chart) => { if (chart.tooltip?._active && chart.tooltip._active.length) { const activePoint = chart.tooltip._active[0]; const ctx2 = chart.ctx; const x = activePoint.element.x; const topY = chart.scales.y.top; const bottomY = chart.scales.y.bottom; ctx2.save(); ctx2.beginPath(); ctx2.setLineDash([3,3]); ctx2.moveTo(x, topY); ctx2.lineTo(x, bottomY); ctx2.lineWidth = 1; ctx2.strokeStyle = '#9ca3af'; ctx2.stroke(); ctx2.restore(); } } };
+        if (typeof Chart !== 'undefined') {
+          Chart.register(verticalLinePlugin);
+          new Chart(ctx, { type: 'line', data: { labels, datasets: [
+            { label: strategyLabel, data: meanReversionTrimmed.map(i=>i.y), borderColor: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.1)', borderWidth: 1, fill: false, tension: 0.1, pointRadius: 0, pointHoverRadius: 3 },
+            { label: 'SPY Buy & Hold', data: spyTrimmed.map(i=>i.y), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, fill: true, tension: 0.1, pointRadius: 0, pointHoverRadius: 3 }
+          ] }, options: { responsive: true, maintainAspectRatio: false, devicePixelRatio: 1, plugins: { legend: { position: 'top', labels: { fontSize: 12, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', usePointStyle: true, pointStyle: 'rect', padding: 15 } }, tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#374151', bodyColor: '#374151', borderColor: '#e5e7eb', borderWidth: 1, cornerRadius: 6, displayColors: true, callbacks: { title: function(tooltipItems){ const index = tooltipItems[0].dataIndex; const date = new Date(allDates[index]); return date.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }, label: function(context){ const value = context.parsed.y; const formattedValue = value >= 1000000 ? '$' + (value/1000000).toFixed(1) + 'M' : '$' + (value/1000).toFixed(0) + 'K'; return context.dataset.label + ': ' + formattedValue; } } } }, scales: { x: { display: true, title: { display: false }, ticks: { maxTicksLimit: 26, font: { size: 10 }, autoSkip: false, callback: function(value){ const label = this.getLabelForValue(value); return label !== '' ? label : undefined; } }, grid: { color: '#f3f4f6', drawBorder: false } }, y: { display: true, type: 'logarithmic', title: { display: false }, ticks: { callback: function(value){ if (value >= 1000000) { return '$' + (value/1000000).toFixed(0) + 'M'; } else if (value >= 100000) { return '$' + (value/1000).toFixed(0) + 'K'; } return '$' + value.toLocaleString(); }, font: { size: 10 } }, grid: { color: '#f3f4f6', drawBorder: false } } }, interaction: { mode: 'index', axis: 'x', intersect: false }, elements: { line: { tension: 0.1 } } } });
+        }
+
+        // Forecast + monthly table for this block
+        (function generateMonthlyTableScoped(rawData){
+          const validData = rawData.filter(d => d.Date && d.Equity && !isNaN(d.Equity)); validData.sort((a,b)=> new Date(a.Date) - new Date(b.Date));
+          const cleanedData = validData.map(d => ({ date: new Date(d.Date), equity: parseFloat(d.Equity.toString().replace(/[$,]/g,'').trim()) }));
+          const dailyReturns = []; for (let i=1;i<cleanedData.length;i++){ const cur=cleanedData[i].equity, prev=cleanedData[i-1].equity; if (prev>0){ dailyReturns.push({ date: cleanedData[i].date, return: (cur-prev)/prev, equity: cur }); } }
+          const monthlyGroups = {}, yearlyGroups = {}; dailyReturns.forEach(d => { const y=d.date.getFullYear(), m=d.date.getMonth(), k=`${y}-${m}`; if(!monthlyGroups[k]) monthlyGroups[k]={ year:y, month:m, dailyReturns:[] }; monthlyGroups[k].dailyReturns.push(d.return); if(!yearlyGroups[y]) yearlyGroups[y]={ dailyReturns:[] }; yearlyGroups[y].dailyReturns.push(d.return); });
+          const monthlyReturns = {}; Object.values(monthlyGroups).forEach(md=>{ if(md.dailyReturns.length>0){ const gf = md.dailyReturns.reduce((p,r)=>p*(1+r),1); const mp = Math.round((gf-1)*1000)/10; if(!monthlyReturns[md.year]) monthlyReturns[md.year]={}; monthlyReturns[md.year][md.month]=mp; } });
+          Object.keys(yearlyGroups).forEach(y=>{ const yr=yearlyGroups[y]; if(yr.dailyReturns.length>0){ const gf = yr.dailyReturns.reduce((p,r)=>p*(1+r),1); const yp = Math.round((gf-1)*1000)/10; if(!monthlyReturns[y]) monthlyReturns[y]={}; monthlyReturns[y].annual=yp; } });
+          const years = Object.keys(monthlyReturns).sort(); years.forEach(y=>{ let maxDD=0, peak=0; dailyReturns.forEach(d=>{ if(d.date.getFullYear()===parseInt(y)){ if(d.equity>peak) peak=d.equity; const dd=((peak-d.equity)/peak)*100; if(dd>maxDD) maxDD=dd; } }); monthlyReturns[y].maxDrawdown=Math.round(maxDD*10)/10; });
+          const monthlyAverages={}, months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; let totalAnnualReturn=0,totalMaxDrawdown=0,validYears=0; for(let m=0;m<12;m++){ let sum=0,count=0; years.forEach(y=>{ if(monthlyReturns[y][m]!==undefined && monthlyReturns[y][m]!==null){ sum+=monthlyReturns[y][m]; count++; } }); monthlyAverages[m]= count>0 ? Math.round((sum/count)*10)/10 : 0; } years.forEach(y=>{ if(monthlyReturns[y].annual!==undefined){ totalAnnualReturn+=monthlyReturns[y].annual; totalMaxDrawdown+=monthlyReturns[y].maxDrawdown; validYears++; } });
+          const avgAnnualReturn = validYears>0 ? Math.round((totalAnnualReturn/validYears)*10)/10 : 0; const avgMaxDrawdown = validYears>0 ? Math.round((totalMaxDrawdown/validYears)*10)/10 : 0; const avgMonthlyReturn = Object.values(monthlyAverages).reduce((s,a)=>s+a,0)/12; const latestEquity = cleanedData.length>0 ? cleanedData[cleanedData.length-1].equity : 100000; const forecastAmount = Math.round((avgMonthlyReturn/100)*latestEquity); const forecastAmount100k = Math.round((avgMonthlyReturn/100)*100000);
+          const forecastBanner = document.getElementById(`forecastBanner-${idSuffix}`); const f1 = document.getElementById(`forecastAmount-${idSuffix}`); const f2 = document.getElementById(`forecastAmount100k-${idSuffix}`); if (forecastBanner && f1 && f2){ f1.textContent = `$${forecastAmount.toLocaleString()}`; f2.textContent = `$${forecastAmount100k.toLocaleString()}`; forecastBanner.style.display='block'; const dateSpan = document.getElementById(`nextMonthDates-${idSuffix}`); if(dateSpan){ const now=new Date(); let nm=now.getMonth()+1, ny=now.getFullYear(); if(nm>11){ nm=0; ny++; } const start=new Date(ny,nm,1), end=new Date(ny,nm+1,0); const fmt=(d)=>{ const mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'), yy=String(d.getFullYear()).slice(-2); return `${mm}/${dd}/${yy}`; }; dateSpan.textContent = `${fmt(start)} - ${fmt(end)}`; } }
+          let tableHTML = `<table class="monthly-table"><thead><tr><th>YEAR</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>TOTAL</th><th>MaxDD</th></tr></thead><tbody>`; years.forEach(y=>{ tableHTML+=`<tr>`; tableHTML+=`<td class="year-column">${y}</td>`; months.forEach((m,idx)=>{ const v=monthlyReturns[y][idx]; let cls='', disp='n/a'; if(v!==undefined && v!==null && !isNaN(v)){ disp=`${v.toFixed(1)}%`; cls = v<0 ? 'gain-negative' : 'gain-positive'; } tableHTML+=`<td class="${cls}">${disp}</td>`; }); const tot=monthlyReturns[y].annual; let tcls='', tdisp='n/a'; if(tot!==undefined && tot!==null && !isNaN(tot)){ tdisp=`${tot.toFixed(1)}%`; tcls = tot<0 ? 'gain-negative' : 'gain-positive'; } tableHTML+=`<td class="total-column ${tcls}">${tdisp}</td>`; const mdd=monthlyReturns[y].maxDrawdown; let mdisp='n/a'; if(mdd!==undefined && !isNaN(mdd)){ mdisp = `-${mdd.toFixed(1)}%`; } tableHTML+=`<td class="maxdd-column">${mdisp}</td>`; tableHTML+=`</tr>`; }); tableHTML+=`<tr class="avg-row"><td class="year-column">AVG</td>${months.map((m,idx)=>`<td>${monthlyAverages[idx].toFixed(1)}%</td>`).join('')}<td class="total-column">${avgAnnualReturn.toFixed(1)}%</td><td class="maxdd-column">-${avgMaxDrawdown.toFixed(1)}%</td></tr>`; tableHTML+=`</tbody></table>`;
+          const panel = document.getElementById(`monthlyTablePanel-${idSuffix}`); if (panel) panel.innerHTML = tableHTML;
+        })(meanReversionData);
+      } catch (error) {
+        console.error('Error loading block data:', error);
+        const ctx = document.getElementById(`equityChart-${idSuffix}`);
+        if (ctx) { const parent = ctx.parentElement; parent.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#ef4444;font-size:14px;">Failed to load chart data.</div>'; }
+      }
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      // Update next month dates
+      updateNextMonthDates();
+      
+      // Allow both query param (?demo=...) and product handle to trigger multi-strategy view
+      const multiKey = (customDemoUrl && customDemoMap[customDemoUrl]) ? customDemoUrl : ((productHandle && customDemoMap[productHandle]) ? productHandle : null);
+      if (multiKey) {
+        // Hide original combined view
+        const originalMain = document.querySelector('.main-layout');
+        const originalMonthly = document.querySelector('.monthly-table-section');
+        const originalForecast = document.getElementById('forecastBanner');
+        if (originalMain) originalMain.style.display = 'none';
+        if (originalMonthly) originalMonthly.style.display = 'none';
+        if (originalForecast) originalForecast.style.display = 'none';
+
+        const strategies = customDemoMap[multiKey];
+        strategies.forEach((s, idx) => {
+          const urls = { newmrUrl: s.newmrUrl, spyUrl: defaultUrls.spyUrl, statsUrl: s.statsUrl, extendedUrl: s.extendedUrl };
+          const suffix = `${multiKey}-${idx+1}`;
+          createStrategyBlock(suffix, `${s.name} Equity Curve`);
+          if (typeof Chart !== 'undefined') {
+            loadEquityDataFor(urls, suffix, s.name);
+          }
+        });
+      } else {
+        if (typeof Chart !== 'undefined') {
+          loadEquityData();
+        } else {
+          console.error('Chart.js not loaded');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
