@@ -1,5 +1,5 @@
 {
-  "sum_commission": "15,900",
-  "sum_dividends": "215,038",
-  "avg_bars": "112"
+  "sum_commission": 15900.0,
+  "sum_dividends": 215038.53000000006,
+  "avg_bars": 112.30314465408804
 }

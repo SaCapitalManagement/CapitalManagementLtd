@@ -2,9 +2,9 @@
   "Drawdown": -15.49,
   "Sharpe": 1.41,
   "Expectancy": 1.41,
-  "NetProfit": "9,424,438",
-  "Trades": "3,339",
+  "NetProfit": 9424438.0,
+  "Trades": 3339,
   "MAR": 1.23,
-  "PctWins": "69.54%",
+  "PctWins": 69.54,
   "MaxExposure": 99.9
 }
